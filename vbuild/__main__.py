@@ -23,11 +23,10 @@ def main() -> int:
         return 0
 
     except CalledProcessError as e:
-        print(e)
         if e.stderr is not None:
             print(e.stderr)
 
-        return 1
+        raise
 
 
 if __name__ == "__main__":
