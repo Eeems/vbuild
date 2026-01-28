@@ -4,16 +4,21 @@
 # nuitka-project: --onefile
 # nuitka-project: --lto=yes
 # nuitka-project:--python-flag=-m
+import os
 import sys
+import argparse
 
 from subprocess import CalledProcessError
 
-from .recipe import parse
+from .velbuild import parse
 
 
 def main() -> int:
     try:
-        recipe = parse(sys.argv[1])
+        parser = argparse.ArgumentParser()
+        _ = parser.add_argument("directory")
+        args = parser.parse_args()
+        recipe = parse(os.path.join(args.directory, "VELBUILD"))
         print(recipe.text)
 
         return 0

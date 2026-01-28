@@ -15,7 +15,7 @@ INSTALL_FUNCTION_NAMES = [
 ]
 
 
-class Recipe(APKBUILD):
+class VELBUILD(APKBUILD):
     @APKBUILD.text.getter
     def text(self) -> str:
         lines: list[str] = []
@@ -77,8 +77,8 @@ class Recipe(APKBUILD):
         return self.functions["postosupgrade"]
 
 
-def parse(path: str) -> Recipe:
+def parse(path: str) -> VELBUILD:
     with open(path, "r") as f:
         variables, functions = bash.parse(f.read())
 
-    return Recipe(variables, functions)
+    return VELBUILD(variables, functions)
