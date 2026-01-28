@@ -1,6 +1,8 @@
 import os
 import shlex
 
+from inspect import cleandoc
+
 from . import bash
 
 from .apkbuild import APKBUILD
@@ -66,7 +68,7 @@ class VELBUILD(APKBUILD):
                 os.path.join(path, f"{self.pkgname}.{INSTALL_FUNCTION_NAME_MAP[name]}"),
                 "w",
             ) as f:
-                _ = f.write("#!/bin/sh" + src)
+                _ = f.write("#!/bin/sh\n" + src)
 
     @APKBUILD.install.getter
     def install(self) -> str:
@@ -77,33 +79,40 @@ class VELBUILD(APKBUILD):
 
         return data + "\n"
 
+    def _getsrc(self, name: str) -> str | None:
+        src = self.functions.get(name, None)
+        if src is None:
+            return None
+
+        return cleandoc(src)
+
     @property
     def preinstall(self) -> str | None:
-        return self.functions.get("preinstall", None)
+        return self._getsrc("preinstall")
 
     @property
     def postinstall(self) -> str | None:
-        return self.functions.get("postinstall", None)
+        return self._getsrc("postinstall")
 
     @property
     def preupgrade(self) -> str | None:
-        return self.functions.get("preupgrade", None)
+        return self._getsrc("preupgrade")
 
     @property
     def postupgrade(self) -> str | None:
-        return self.functions.get("postupgrade", None)
+        return self._getsrc("postupgrade")
 
     @property
     def predeinstall(self) -> str | None:
-        return self.functions.get("predeinstall", None)
+        return self._getsrc("predeinstall")
 
     @property
     def postdeinstall(self) -> str | None:
-        return self.functions.get("postdeinstall", None)
+        return self._getsrc("postdeinstall")
 
     @property
     def postosupgrade(self) -> str | None:
-        return self.functions.get("postosupgrade", None)
+        return self._getsrc("postosupgrade")
 
 
 def parse(path: str) -> VELBUILD:
