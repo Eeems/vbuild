@@ -18,8 +18,7 @@ def main() -> int:
         parser = argparse.ArgumentParser()
         _ = parser.add_argument("directory")
         args = parser.parse_args()
-        recipe = parse(os.path.join(args.directory, "VELBUILD"))
-        print(recipe.text)
+        parse(os.path.join(args.directory, "VELBUILD")).save(args.directory)
 
         return 0
 
