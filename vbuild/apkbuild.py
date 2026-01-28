@@ -1,12 +1,11 @@
 import shlex
 
-from typing import Any
 from typing import TypeVar
 from typing import Callable
 
 from . import bash
 
-F = TypeVar("F", bound=Callable[["APKBUILD", str | None], Any])  # pyright: ignore[reportExplicitAny]
+F = TypeVar("F", bound=Callable[["APKBUILD", str | None], str | None])
 
 
 def string_property(func: F) -> property:  # pyright: ignore[reportInvalidTypeVarUse]
@@ -15,7 +14,7 @@ def string_property(func: F) -> property:  # pyright: ignore[reportInvalidTypeVa
     def wrapper(self: "APKBUILD") -> str | None:
         value = self.variables.get(name, None)
         assert value is None or isinstance(value, str)
-        return func(self, value)  # pyright: ignore[reportAny]
+        return func(self, value)
 
     return property(wrapper)
 

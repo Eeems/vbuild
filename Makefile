@@ -115,7 +115,7 @@ lint: $(VENV_BIN_ACTIVATE)
 
 lint-fix: $(VENV_BIN_ACTIVATE)
 	. $(VENV_BIN_ACTIVATE); \
-	python -m ruff check
+	python -m ruff check --fix
 
 format: $(VENV_BIN_ACTIVATE)
 	. $(VENV_BIN_ACTIVATE); \
