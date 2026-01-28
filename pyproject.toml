@@ -1,0 +1,51 @@
+[project]
+name = "vbuild"
+version = "0.0.1"
+authors = [
+  { name="Eeems", email="eeems@eeems.email" },
+]
+description = "Build system used for vellum"
+license = "MIT"
+requires-python = ">=3.13"
+classifiers = [
+    "Development Status :: 5 - Alpha",
+    "Intended Audience :: Developers",
+    "Operating System :: POSIX :: Linux",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3 :: Only",
+    "Topic :: Software Development :: Build Tools",
+    "Topic :: System :: Archiving :: Packaging",
+]
+keywords = [
+    "build-tooling",
+    "packaging",
+    "distribution",
+]
+dynamic = ["dependencies", "readme"]
+
+[project.urls]
+"Homepage" = "https://github.com/Eeems/vbuild"
+"Bug Tracker" = "https://github.com/Eeems/vbuild/issues"
+
+[project.scripts]
+vbuild = "vbuild.__main__:main"
+
+[tool.setuptools]
+packages = [
+    "vbuild",
+]
+
+[tool.setuptools.package-data]
+vbuild = ["py.typed", "*.py.typed"]
+
+[tool.setuptools.dynamic]
+dependencies = {file = ["requirements.txt"]}
+readme = {file= ["README.md"], content-type = "text/markdown"}
+
+[build-system]
+requires = [
+    "setuptools>=80",
+    "wheel"
+]
+build-backend = "setuptools.build_meta"
