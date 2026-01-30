@@ -201,6 +201,7 @@ def main() -> int:
             "-C",
             help="Change directory to DIR before running any commands",
             default=".",
+            metavar="DIR",
         )
         parser.set_defaults(func=None)
         subparsers = parser.add_subparsers(help="COMMANDS")
