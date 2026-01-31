@@ -213,8 +213,7 @@ def main() -> int:
         args = parser.parse_args()
         func = cast(CommandCallable | None, args.func)
         if func is None:
-            parser.print_usage()
-            return 1
+            func = all
 
         return func(args)
 
