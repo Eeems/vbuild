@@ -2,22 +2,23 @@ import podman
 import docker
 
 from contextlib import contextmanager
-from typing import ContextManager
+from collections.abc import Generator
 from typing import cast
 
 
 @contextmanager
-def client() -> ContextManager[podman.PodmanClient]:
+def from_env() -> Generator[podman.PodmanClient, None, None]:
     for engine in [podman, docker]:
-        client = engine.from_env()  # pyright: ignore[reportAny]
-        if not client.ping():  # pyright: ignore[reportAny]
-            client.close()  # pyright: ignore[reportAny]
+        client = cast(podman.PodmanClient, engine.from_env())  # pyright: ignore[reportAny]
+        if not client.ping():
+            client.close()
             continue
 
         try:
-            yield cast(podman.PodmanClient, client)
-            return
+            yield client
+            break
         finally:
-            client.close()  # pyright: ignore[reportAny]
+            client.close()
 
-    raise Exception("Unable to connect to docker or podman")
+    else:
+        raise Exception("Unable to connect to docker or podman")
