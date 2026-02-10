@@ -31,7 +31,11 @@ class VELBUILD(APKBUILD):
         lines: list[str] = []
 
         for name, value in self.variables.items():
-            if value is None or name in bash.DEFAULT_VARIABLE_NAMES:
+            if (
+                value is None
+                or name in bash.DEFAULT_VARIABLE_NAMES
+                or name == "sha512sums"
+            ):
                 continue
 
             if name in ("upstream_author", "category"):
@@ -59,6 +63,11 @@ class VELBUILD(APKBUILD):
         for name, value in self.functions.items():
             if name not in INSTALL_FUNCTION_NAMES:
                 lines.append(f"{name}() {{{value}}}")
+
+        if "sha512sums" in self.variables:
+            value = self.variables["sha512sums"]
+            assert isinstance(value, str)
+            lines.append(f"sha512sums={shlex.quote(value)}")
 
         return "\n".join(lines)
 
@@ -94,6 +103,9 @@ class VELBUILD(APKBUILD):
 
         if self.maintainer is None:  # pyright: ignore[reportAny]
             yield ErrorType.Error, "maintainer is not set"
+
+        if self.sha256sums is not None:  # pyright: ignore[reportAny]
+            yield ErrorType.Error, "sha256sums is not supported by vbuild"
 
     @APKBUILD.install.getter
     def install(self) -> str:
