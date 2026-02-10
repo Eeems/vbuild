@@ -6,6 +6,7 @@ from argparse import Namespace
 from typing import Any
 from typing import cast
 
+from ..apkbuild import ErrorType
 from ..velbuild import parse
 
 kwds: dict[str, str] = {
@@ -29,6 +30,16 @@ def command(args: Namespace) -> int:
         raise Exception("pkgname is missing")
 
     print(f">>> {package.pkgname}: Generating APKBUILD")  # pyright: ignore[reportAny]
+    fail = False
+    for type, msg in package.validate():
+        if type == ErrorType.Error:
+            fail = True
+
+        print(f">>> {ErrorType.string(type).upper()}: {package.pkgname}: {msg}")  # pyright: ignore[reportAny]
+
+    if fail:
+        return 1
+
     package.save(directory)
     return 0
 

@@ -1,11 +1,15 @@
 import os
 import shlex
 
+from collections.abc import Generator
 from inspect import cleandoc
+from typing import override
 
 from . import bash
 
 from .apkbuild import APKBUILD
+from .apkbuild import ErrorType
+from .apkbuild import string_property
 
 
 INSTALL_FUNCTION_NAME_MAP = {
@@ -29,6 +33,9 @@ class VELBUILD(APKBUILD):
         for name, value in self.variables.items():
             if value is None or name in bash.DEFAULT_VARIABLE_NAMES:
                 continue
+
+            if name in ("upstream_author", "category"):
+                name = f"_{name}"
 
             if isinstance(value, str):
                 lines.append(f"{name}={shlex.quote(value)}")
@@ -69,6 +76,24 @@ class VELBUILD(APKBUILD):
                 "w",
             ) as f:
                 _ = f.write(f"#!/bin/sh\n{src}")
+
+    @override
+    def validate(self) -> Generator[tuple[ErrorType, str]]:
+        if self.upstream_author is None:  # pyright: ignore[reportAny]
+            yield ErrorType.Error, "_upstream_author is not set"
+
+        if self.category is None:  # pyright: ignore[reportAny]
+            yield ErrorType.Error, "_category is not set"
+
+        pkgdesc_len = len(self.pkgdesc)  # pyright: ignore[reportAny]
+        if pkgdesc_len >= 128:
+            yield (
+                ErrorType.Error,
+                f"pkgdesc is too long ({pkgdesc_len} chars, must be <128)",
+            )
+
+        if self.maintainer is None:  # pyright: ignore[reportAny]
+            yield ErrorType.Error, "maintainer is not set"
 
     @APKBUILD.install.getter
     def install(self) -> str:
@@ -113,6 +138,14 @@ class VELBUILD(APKBUILD):
     @property
     def postosupgrade(self) -> str | None:
         return self._getsrc("postosupgrade")
+
+    @string_property
+    def category(self, value: str | None) -> str | None:
+        return value
+
+    @string_property
+    def upstream_author(self, value: str | None) -> str | None:
+        return value
 
 
 def parse(path: str) -> VELBUILD:

@@ -1,14 +1,22 @@
 import shlex
 
-from typing import TypeVar
+from enum import Enum
 from typing import Callable
+from collections.abc import Generator
 
 from . import bash
 
-F = TypeVar("F", bound=Callable[["APKBUILD", str | None], str | None])
+
+class ErrorType(Enum):
+    Error = 1
+    Warning = 2
+
+    @staticmethod
+    def string(type: "ErrorType") -> str:
+        return str(type)[10:]
 
 
-def string_property(func: F) -> property:  # pyright: ignore[reportInvalidTypeVarUse]
+def string_property(func: Callable[..., str | None]) -> property:
     name = func.__name__
 
     def wrapper(self: "APKBUILD") -> str | None:
@@ -54,6 +62,23 @@ class APKBUILD:
             lines.append(f"{name}() {{{value}}}")
 
         return "\n".join(lines)
+
+    def validate(self) -> Generator[tuple[ErrorType, str]]:
+        if self._upstream_author is None:  # pyright: ignore[reportAny]
+            yield ErrorType.Error, "_upstream_author is not set"
+
+        if self._category is None:  # pyright: ignore[reportAny]
+            yield ErrorType.Error, "_category is not set"
+
+        pkgdesc_len = len(self.pkgdesc)  # pyright: ignore[reportAny]
+        if pkgdesc_len >= 128:
+            yield (
+                ErrorType.Error,
+                f"pkgdesc is too long ({pkgdesc_len} chars, must be <128)",
+            )
+
+        if self.maintainer is None:  # pyright: ignore[reportAny]
+            yield ErrorType.Error, "maintainer is not set"
 
     @string_property
     def maintainer(self, value: str | None) -> str:
@@ -197,11 +222,11 @@ class APKBUILD:
         return value
 
     @string_property
-    def upstream_author(self, value: str | None) -> str | None:
+    def _upstream_author(self, value: str | None) -> str | None:
         return value
 
     @string_property
-    def category(self, value: str | None) -> str | None:
+    def _category(self, value: str | None) -> str | None:
         return value
 
     @string_property

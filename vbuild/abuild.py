@@ -1,5 +1,6 @@
 import os
 import sys
+import shlex
 import subprocess
 
 from collections.abc import Generator
@@ -49,7 +50,17 @@ def abuild(
                 "\n".join(
                     SETUP_CONTAINER
                     + [
-                        f"REPODEST=/work/dist abuild -C /work -d -r -F {action}",
+                        shlex.join(
+                            [
+                                "abuild",
+                                "-C",
+                                "/work",
+                                "-d",
+                                "-r",
+                                "-F",
+                                action,
+                            ]
+                        ),
                     ]
                 ),
             ],
@@ -63,6 +74,7 @@ def abuild(
             environment={
                 "CARCH": os.environ.get("CARCH", "noarch"),
                 "SOURCE_DATE_EPOCH": "0",
+                "REPODEST": "/work/dist",
             },
         )
         assert not isinstance(container, Generator)
