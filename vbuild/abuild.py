@@ -19,7 +19,7 @@ def abuild(
     action: str = "all",
 ) -> int:
     directory = os.path.abspath(directory)
-    distfiles = os.path.join(directory, ".distfiles")
+    distfiles = os.path.expanduser("~/.cache/vbuild/distfiles")
     os.makedirs(distfiles, exist_ok=True)
     filepath = os.path.join(directory, "APKBUILD")
     if not os.path.exists(filepath):
