@@ -5,6 +5,8 @@ from argparse import Namespace
 from typing import Any
 from typing import cast
 
+from ..abuild import abuild
+
 kwds: dict[str, str] = {
     "help": "check the APKBUILD file for violations of policy, superfluous statements, stylistic violations and others",
 }
@@ -14,8 +16,8 @@ def register(_: ArgumentParser):
     pass
 
 
-def command(_: Namespace) -> int:
-    return 0
+def command(args: Namespace) -> int:
+    return abuild(cast(str, args.C), "validate")
 
 
 if __name__ == "__main__":

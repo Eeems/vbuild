@@ -48,7 +48,7 @@ class VELBUILD(APKBUILD):
 
                 lines.append(")")
 
-        lines.append(f"install={shlex.quote(self.install)}")
+        lines.append(f"install={shlex.quote(self.install)}")  # pyright: ignore[reportAny]
         for name, value in self.functions.items():
             if name not in INSTALL_FUNCTION_NAMES:
                 lines.append(f"{name}() {{{value}}}")
@@ -59,23 +59,23 @@ class VELBUILD(APKBUILD):
         with open(os.path.join(path, "APKBUILD"), "w") as f:
             _ = f.write(self.text)
 
-        for name, suffix in INSTALL_FUNCTION_NAME_MAP.items():
-            src = getattr(self, name)
+        for name, _ in INSTALL_FUNCTION_NAME_MAP.items():
+            src = getattr(self, name)  # pyright: ignore[reportAny]
             if src is None:
                 continue
 
             with open(
-                os.path.join(path, f"{self.pkgname}.{INSTALL_FUNCTION_NAME_MAP[name]}"),
+                os.path.join(path, f"{self.pkgname}.{INSTALL_FUNCTION_NAME_MAP[name]}"),  # pyright: ignore[reportAny]
                 "w",
             ) as f:
-                _ = f.write("#!/bin/sh\n" + src)
+                _ = f.write(f"#!/bin/sh\n{src}")
 
     @APKBUILD.install.getter
     def install(self) -> str:
         data = ""
         for name in INSTALL_FUNCTION_NAMES:
-            if name in self.functions:
-                data += f"\n{self.pkgname}.{INSTALL_FUNCTION_NAME_MAP[name]}"
+            if name in self.functions and name != "postosupgrade":
+                data += f"\n{self.pkgname}.{INSTALL_FUNCTION_NAME_MAP[name]}"  # pyright: ignore[reportAny]
 
         return data + "\n"
 

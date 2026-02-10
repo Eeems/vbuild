@@ -5,7 +5,7 @@ from argparse import Namespace
 from typing import Any
 from typing import cast
 
-from ..__main__ import commands
+from . import commands
 
 kwds: dict[str, str] = {
     "help": "Runs the entire build process. This is the default when no other command is specified.",
@@ -18,8 +18,8 @@ def register(_: ArgumentParser):
 
 def command(args: Namespace) -> int:
     for name in [
-        "validate",
         "gen",
+        "validate",
         "clean",
         "fetch",
         "unpack",
