@@ -1,9 +1,10 @@
 # nuitka-project: --enable-plugin=pylint-warnings
-# nuitka-project: --enable-plugin=upx
+## nuitka-project: --enable-plugin=upx
 # nuitka-project: --warn-implicit-exceptions
 # nuitka-project: --onefile
 # nuitka-project: --lto=yes
 # nuitka-project:--python-flag=-m
+# nuitka-project:--include-package=vbuild.cli
 import sys
 
 from .cli import main

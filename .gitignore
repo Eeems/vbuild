@@ -164,3 +164,4 @@ cython_debug/
 .nuitka/
 package/
 .ruff_cache/
+vbuild/cli/__names__.py

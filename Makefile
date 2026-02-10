@@ -90,9 +90,13 @@ ${VENV_BIN_ACTIVATE}: requirements.txt
 	    --extra-index-url=https://wheels.eeems.codes/ \
 	    -r requirements.txt
 
-dist/vbuild: dist ${VENV_BIN_ACTIVATE} $(OBJ)
+vbuild/cli/__names__.py: ${VENV_BIN_ACTIVATE} $(OBJ)
 	. ${VENV_BIN_ACTIVATE}; \
-	python -m pip install wheel nuitka; \
+	python -u write_cli_names.py
+
+dist/vbuild: dist vbuild/cli/__names__.py ${VENV_BIN_ACTIVATE} $(OBJ)
+	. ${VENV_BIN_ACTIVATE}; \
+	python -m pip install wheel nuitka zstandard; \
 	NUITKA_CACHE_DIR="$(realpath .)/.nuitka" \
 	nuitka \
 	    --assume-yes-for-downloads \

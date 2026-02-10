@@ -5,7 +5,7 @@ from argparse import Namespace
 from typing import Any
 from typing import cast
 
-from . import commands
+from .__modules__ import commands
 
 kwds: dict[str, str] = {
     "help": "Runs the entire build process. This is the default when no other command is specified.",
