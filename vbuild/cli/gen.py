@@ -24,7 +24,9 @@ def command(args: Namespace) -> int:
         print(f"{filepath} not found")
         return 1
 
-    parse(filepath).save(directory)
+    package = parse(filepath)
+    print(f">>> {package.pkgname}: Generating APKBUILD")
+    package.save(directory)
     return 0
 
 
