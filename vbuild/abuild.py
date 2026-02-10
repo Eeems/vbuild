@@ -9,11 +9,6 @@ from . import containers
 
 SETUP_CONTAINER = [
     "set -e",
-    "apk add --no-cache alpine-sdk",
-    "if [ -d /work-src ];then",
-    "  cp -r /work-src/packages /work/",
-    "  cp -r /work-src/keys /work/",
-    "fi",
     'mkdir -p /work/dist/"$CARCH"',
     "cp /root/.abuild/vbuild.rsa.pub /etc/apk/keys/",
 ]
@@ -47,7 +42,7 @@ def abuild(
 
     with containers.from_env() as client:
         container = client.containers.run(  # pyright: ignore[reportUnknownMemberType]
-            "alpine:3",
+            "ghcr.io/eeems/vbuild-builder:main",
             [
                 "sh",
                 "-c",

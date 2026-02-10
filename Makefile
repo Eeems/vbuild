@@ -125,6 +125,11 @@ format-fix: $(VENV_BIN_ACTIVATE)
 	. $(VENV_BIN_ACTIVATE); \
 	python -m ruff format
 
+builder:
+	podman build \
+	  --tag=ghcr.io/eeems/vbuild-builder \
+	  builder/
+
 .PHONY: \
 	all \
 	build \
@@ -138,4 +143,5 @@ format-fix: $(VENV_BIN_ACTIVATE)
 	lint \
 	lint-fix \
 	format \
-	format-fix
+	format-fix \
+	builder
