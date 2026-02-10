@@ -1,23 +1,6 @@
 .DEFAULT_GOAL := all
 PACKAGE := $(shell grep -m 1 name pyproject.toml | tr -s ' ' | tr -d "'\":" | cut -d' ' -f3)
-
 SHELL := /bin/bash
-ifeq ($(OS),Windows_NT)
-	SHELL := /bin/bash
-	ifeq ($(VENV_BIN_ACTIVATE),)
-		VENV_BIN_ACTIVATE := .venv/Scripts/activate
-	endif
-else
-	ifeq ($(VENV_BIN_ACTIVATE),)
-		VENV_BIN_ACTIVATE := .venv/bin/activate
-	endif
-	UNAME_S := $(shell uname -s)
-endif
-
-OBJ := $(wildcard ${PACKAGE}/**)
-OBJ += requirements.txt
-OBJ += pyproject.toml
-OBJ += README.md
 
 ifeq ($(VENV_BIN_ACTIVATE),)
 VENV_BIN_ACTIVATE := .venv/bin/activate
@@ -26,6 +9,11 @@ endif
 ifeq ($(PYTHON),)
 PYTHON := python
 endif
+
+OBJ := $(wildcard ${PACKAGE}/**)
+OBJ += requirements.txt
+OBJ += pyproject.toml
+OBJ += README.md
 
 clean:
 	if [ -d .venv/mnt ] && mountpoint -q .venv/mnt; then \
