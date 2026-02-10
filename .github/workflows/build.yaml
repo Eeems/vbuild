@@ -1,0 +1,139 @@
+name: Check and Build
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+  workflow_dispatch:
+  release:
+    types: [released]
+permissions: read-all
+jobs:
+  test:
+    name: Test with python ${{ matrix.python }}
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python:
+          - "3.14"
+    steps:
+      - name: Checkout the Git repository
+        uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+          cache: "pip"
+      - name: Cache test files
+        uses: actions/cache@v4
+        with:
+          path: |
+            .venv/bin/codexctl.bin
+            .venv/*_reMarkable2-*.signed
+          key: test-files-${{ hashFiles('Makefile') }}
+      - name: Run tests
+        run: make test
+  build-executable-ubuntu:
+    name: Build executable for ubuntu
+    needs: [test]
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python:
+          - "3.14"
+    steps:
+      - name: Checkout the Git repository
+        uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+          cache: "pip"
+      - name: Nuitka ccache
+        uses: actions/cache@v4
+        with:
+          path: ${{ github.workspace }}/.nuitka
+          key: ${{ github.job }}-ccache-ubuntu-latest
+      - name: Build with nuitka
+        run: make executable
+      - uses: actions/upload-artifact@v4
+        with:
+          name: vbuild-ubuntu
+          path: dist
+          if-no-files-found: error
+  build-executable-alpine:
+    name: Build executable for alpine ${{ matrix.alpine }}
+    needs: [test]
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        alpine:
+          - v3.24
+    steps:
+      - name: Checkout the Git repository
+        uses: actions/checkout@v4
+      - uses: jirutka/setup-alpine@v1
+        with:
+          branch: ${{ matrix.alpine }}
+          packages: >
+            build-base
+            python3
+            python3-dev
+            py3-pip
+            py3-wheel
+            ccache
+            git
+            patchelf
+            upx
+      - name: Nuitka ccache
+        uses: actions/cache@v4
+        with:
+          path: ${{ github.workspace }}/.nuitka
+          key: ${{ github.job }}-ccache-alpine-${{ matrix.alpine }}
+      - name: Build with nuitka
+        shell: alpine.sh {0}
+        run: |
+          make executable
+      - uses: actions/upload-artifact@v4
+        with:
+          name: vbuild-alpine
+          path: dist
+          if-no-files-found: error
+  release:
+    name: Add ${{ matrix.artifact }} to release
+    if: github.repository == 'Eeems/vbuild' && github.event_name == 'release' && startsWith(github.ref, 'refs/tags')
+    needs:
+      - build-executable-ubuntu
+      - build-executable-alpine
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        artifact:
+          - "vbuild-ubuntu"
+          - "vbuild-alpine"
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout the Git repository
+        uses: actions/checkout@v4
+      - name: Download executable
+        id: download
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ matrix.artifact }}
+          path: dist
+      - name: Upload to release
+        run: |
+          if [ -f vbuild ]; then
+            name="vbuild-${{ matrix.artifact }}"
+            mv vbuild "$name"
+            gh release upload "$TAG" "$name" --clobber
+          elif [ -f vbuild-portable ]; then
+            name="vbuild-${{ matrix.artifact }}"
+            mv vbuild-portable "$name"
+            gh release upload "$TAG" "$name" --clobber
+          else
+            find . -type f | xargs -rI {} gh release upload "$TAG" {} --clobber
+          fi
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.event.release.tag_name }}
+        working-directory: ${{ steps.download.outputs.download-path }}

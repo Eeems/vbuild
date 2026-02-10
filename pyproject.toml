@@ -6,13 +6,13 @@ authors = [
 ]
 description = "Build system used for vellum"
 license = "MIT"
-requires-python = ">=3.13"
+requires-python = ">=3.14"
 classifiers = [
     "Development Status :: 5 - Alpha",
     "Intended Audience :: Developers",
     "Operating System :: POSIX :: Linux",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
     "Programming Language :: Python :: 3 :: Only",
     "Topic :: Software Development :: Build Tools",
     "Topic :: System :: Archiving :: Packaging",
