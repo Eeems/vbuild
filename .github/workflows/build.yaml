@@ -58,19 +58,15 @@ jobs:
           path: dist
           if-no-files-found: error
   build-executable-alpine:
-    name: Build executable for alpine ${{ matrix.alpine }}
+    name: Build executable for alpine
     needs: [test]
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        alpine:
-          - v3.23
     steps:
       - name: Checkout the Git repository
         uses: actions/checkout@v4
       - uses: jirutka/setup-alpine@v1
         with:
-          branch: ${{ matrix.alpine }}
+          branch: v3.23
           packages: >
             build-base
             python3
@@ -85,7 +81,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ${{ github.workspace }}/.nuitka
-          key: ${{ github.job }}-ccache-alpine-${{ matrix.alpine }}
+          key: ${{ github.job }}-ccache-alpine
       - name: Build with nuitka
         shell: alpine.sh {0}
         run: |
