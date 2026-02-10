@@ -25,7 +25,10 @@ def command(args: Namespace) -> int:
         return 1
 
     package = parse(filepath)
-    print(f">>> {package.pkgname}: Generating APKBUILD")
+    if package.pkgname is None:  # pyright: ignore[reportAny]
+        raise Exception("pkgname is missing")
+
+    print(f">>> {package.pkgname}: Generating APKBUILD")  # pyright: ignore[reportAny]
     package.save(directory)
     return 0
 
