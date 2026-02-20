@@ -197,6 +197,7 @@ jobs:
             bash
             openssl
             ${{ matrix.engine }}
+          volumes: /run:/run
       - name: Run vbuild
         if: matrix.os != 'alpine'
         shell: bash
