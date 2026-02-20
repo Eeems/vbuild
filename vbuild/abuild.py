@@ -65,7 +65,6 @@ def abuild(
                 ),
             ],
             detach=True,
-            remove=True,
             volumes={
                 directory: {"bind": "/work"},
                 distfiles: {"bind": "/var/cache/distfiles"},
@@ -79,9 +78,13 @@ def abuild(
         )
         assert not isinstance(container, Generator)
         assert not isinstance(container, Iterator)
-        logs = container.logs(stream=True)  # pyright: ignore[reportUnknownMemberType]
-        assert isinstance(logs, Generator)
-        for x in logs:
-            print(x.decode(), file=sys.stderr, end="")
+        try:
+            logs = container.logs(stream=True)  # pyright: ignore[reportUnknownMemberType]
+            assert isinstance(logs, Generator)
+            for x in logs:
+                print(x.decode(), file=sys.stderr, end="")
 
-        return container.wait()  # pyright: ignore[reportUnknownMemberType]
+            return container.wait()  # pyright: ignore[reportUnknownMemberType]
+
+        finally:
+            container.remove()  # pyright: ignore[reportUnknownMemberType]
