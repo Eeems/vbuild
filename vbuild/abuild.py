@@ -80,7 +80,7 @@ def abuild(
         assert not isinstance(container, Iterator)
         try:
             logs = container.logs(stream=True)  # pyright: ignore[reportUnknownMemberType]
-            assert isinstance(logs, Generator)
+            assert isinstance(logs, Generator), f"Not a generator: {logs}"
             for x in logs:
                 print(x.decode(), file=sys.stderr, end="")
 
