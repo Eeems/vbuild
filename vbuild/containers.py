@@ -17,16 +17,21 @@ def from_env() -> Generator[podman.PodmanClient, None, None]:
                 client.close()
                 continue
 
-            yield client
-            break
+            errors = []
 
         except Exception as e:
             errors.append(e)
-            continue
-
-        finally:
             if client is not None:
                 client.close()
+
+            continue
+
+        try:
+            yield client
+            break
+
+        finally:
+            client.close()
 
     else:
         raise ExceptionGroup("Unable to connect to docker or podman", errors)
