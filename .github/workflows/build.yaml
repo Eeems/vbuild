@@ -176,9 +176,9 @@ jobs:
         driver:
           - podman
           - docker
-        artifact:
-          - "vbuild-ubuntu"
-          - "vbuild-alpine"
+        os:
+          - ubuntu
+          - alpine
       fail-fast: false
     steps:
       - name: Checkout the Git repository
@@ -187,9 +187,14 @@ jobs:
         id: download
         uses: actions/download-artifact@v4
         with:
-          name: ${{ matrix.artifact }}
+          name: vbuild-${{ matrix.os }}
           path: dist
+      - uses: jirutka/setup-alpine@v1
+        if: matrix.os == 'alpine'
+        with:
+          branch: v3.23
       - name: Run vbuild
+        shell: ${{ matrix.os == 'alpine' && 'alpine.sh {0}' || 'bash' }}
         run: |
           set -e
           if [ "$driver" == 'podman' ];then
