@@ -193,6 +193,10 @@ jobs:
         if: matrix.os == 'alpine'
         with:
           branch: v3.23
+          packages: >
+            bash
+            openssl
+            ${{ matrix.engine }}
       - name: Run vbuild
         if: matrix.os != 'alpine'
         shell: bash
