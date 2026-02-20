@@ -14,6 +14,8 @@ SETUP_CONTAINER = [
     "cp /root/.abuild/vbuild.rsa.pub /etc/apk/keys/",
 ]
 
+has_pulled = False
+
 def abuild(
     directory: str,
     action: str = "all",
@@ -41,14 +43,18 @@ def abuild(
             _ = f.write("PACKAGER_PRIVKEY=/root/.abuild/vbuild.rsa")
 
     with containers.from_env() as client:
-        logs = containers.pull(client, "ghcr.io/eeems/vbuild-builder", "main")
-        for x in logs:
-            if isinstance(x, bytes):
-                x = x.decode()
+        global has_pulled
+        if not has_pulled:
+            logs = containers.pull(client, "ghcr.io/eeems/vbuild-builder", "main")
+            for x in logs:
+                if isinstance(x, bytes):
+                    x = x.decode()
 
-            x = x.strip()
-            if x:
-                print(x, file=sys.stderr)
+                x = x.strip()
+                if x:
+                    print(x, file=sys.stderr)
+
+            has_pulled = True
 
         container = client.containers.run(  # pyright: ignore[reportUnknownMemberType]
             "ghcr.io/eeems/vbuild-builder:main",
