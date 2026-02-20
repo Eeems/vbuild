@@ -46,7 +46,10 @@ def abuild(
             if isinstance(x, bytes):
                 x = x.decode()
 
-            print(x, file=sys.stderr)
+            x = x.strip()
+            if x:
+                print(x, file=sys.stderr)
+
         container = client.containers.run(  # pyright: ignore[reportUnknownMemberType]
             "ghcr.io/eeems/vbuild-builder:main",
             [
@@ -89,7 +92,10 @@ def abuild(
                 if isinstance(x, bytes):
                     x = x.decode()
 
-                print(x, file=sys.stderr, end="")
+                assert isinstance(x, str)
+                x = x.strip()
+                if x:
+                    print(x, file=sys.stderr)
 
             return container.wait()  # pyright: ignore[reportUnknownMemberType]
 
