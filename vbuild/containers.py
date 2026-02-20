@@ -8,17 +8,25 @@ from typing import cast
 
 @contextmanager
 def from_env() -> Generator[podman.PodmanClient, None, None]:
+    errors:list[Exception] = []
     for engine in [podman, docker]:
-        client = cast(podman.PodmanClient, engine.from_env())  # pyright: ignore[reportAny]
-        if not client.ping():
-            client.close()
-            continue
-
+        client: podman.PodmanClient | None = None
         try:
+            client = cast(podman.PodmanClient, engine.from_env())  # pyright: ignore[reportAny]
+            if not client.ping():
+                client.close()
+                continue
+
             yield client
             break
+
+        except Exception as e:
+            errors.append(e)
+            continue
+
         finally:
-            client.close()
+            if client is not None:
+                client.close()
 
     else:
-        raise Exception("Unable to connect to docker or podman")
+        raise ExceptionGroup("Unable to connect to docker or podman", errors)
