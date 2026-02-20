@@ -1,10 +1,32 @@
 import podman
 import docker
+import json
 
 from contextlib import contextmanager
 from collections.abc import Generator
 from typing import cast
+from typing import Any
 
+def parse_progress(x: dict[str, Any]) -> str:  # pyright: ignore[reportExplicitAny]
+    d = x.get("progressDetail", {})  # pyright: ignore[reportAny]
+    progress:float|str|None = None
+    if "current" in d:
+        progress = d['current'] / d.get("total", 3)  # pyright: ignore[reportAny]
+        progress = f" {progress:.1%}"
+
+    return f"{x.get("status", "")} {x.get("id", "")}{progress or ""}"
+
+def pull(client: podman.PodmanClient | docker.DockerClient, repository: str, tag: str) -> Generator[str, None, None]:
+    if isinstance(client, podman.PodmanClient):
+        yield f"Pulling from {repository} {tag}"
+        logs = client.images.pull(repository, tag, stream=True)  # pyright: ignore[reportUnknownMemberType]
+
+    else:
+        logs = client.api.pull(repository, tag, stream=True, decode=True)  # pyright: ignore[reportUnknownMemberType, reportUnknownVariableType]
+
+    assert isinstance(logs, Generator), f"Not a generator: {logs}"
+    for x in logs:  # pyright: ignore[reportUnknownVariableType]
+        yield parse_progress(json.loads(x) if isinstance(client, podman.PodmanClient) else x)  # pyright: ignore[reportArgumentType, reportUnknownArgumentType]
 
 @contextmanager
 def from_env() -> Generator[podman.PodmanClient, None, None]:

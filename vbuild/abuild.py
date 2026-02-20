@@ -14,7 +14,6 @@ SETUP_CONTAINER = [
     "cp /root/.abuild/vbuild.rsa.pub /etc/apk/keys/",
 ]
 
-
 def abuild(
     directory: str,
     action: str = "all",
@@ -42,6 +41,12 @@ def abuild(
             _ = f.write("PACKAGER_PRIVKEY=/root/.abuild/vbuild.rsa")
 
     with containers.from_env() as client:
+        logs = containers.pull(client, "ghcr.io/eeems/vbuild-builder", "main")
+        for x in logs:
+            if isinstance(x, bytes):
+                x = x.decode()
+
+            print(x, file=sys.stderr)
         container = client.containers.run(  # pyright: ignore[reportUnknownMemberType]
             "ghcr.io/eeems/vbuild-builder:main",
             [
@@ -80,9 +85,11 @@ def abuild(
         assert not isinstance(container, Iterator)
         try:
             logs = container.logs(stream=True)  # pyright: ignore[reportUnknownMemberType]
-            assert isinstance(logs, Generator), f"Not a generator: {logs}"
             for x in logs:
-                print(x.decode(), file=sys.stderr, end="")
+                if isinstance(x, bytes):
+                    x = x.decode()
+
+                print(x, file=sys.stderr, end="")
 
             return container.wait()  # pyright: ignore[reportUnknownMemberType]
 
