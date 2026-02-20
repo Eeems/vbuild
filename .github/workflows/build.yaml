@@ -194,8 +194,9 @@ jobs:
         with:
           branch: v3.23
       - name: Run vbuild
-        shell: ${{ matrix.os == 'alpine' && 'alpine.sh {0}' || 'bash' }}
-        run: |
+        if: matrix.os != 'alpine'
+        shell: bash
+        run: &run-vbuild-executable |
           set -e
           if [ "$driver" == 'podman' ];then
             echo "Starting podman service..."
@@ -215,6 +216,12 @@ jobs:
             echo "Stopping podman service..."
             kill $(jobs -p) || true
           fi
+        env:
+          driver: ${{ matrix.driver }}
+      - name: Run vbuild
+        if: matrix.os == 'alpine'
+        shell: alpine.sh {0}
+        run: *run-vbuild-executable
         env:
           driver: ${{ matrix.driver }}
       - name: Validate output
