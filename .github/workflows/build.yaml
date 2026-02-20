@@ -188,7 +188,7 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: vbuild-${{ matrix.os }}
-          path: dist
+          path: .
       - uses: jirutka/setup-alpine@v1
         if: matrix.os == 'alpine'
         with:
@@ -208,8 +208,9 @@ jobs:
             done
           fi
           echo "Running vbuild..."
-          chmod +x dist/vbuild
-          dist/vbuild -C "tests/${{ matrix.path }}" all
+          ls -l
+          chmod +x vbuild
+          vbuild -C "tests/${{ matrix.path }}" all
           if [ "$driver" == 'podman' ];then
             echo "Stopping podman service..."
             kill $(jobs -p) || true
