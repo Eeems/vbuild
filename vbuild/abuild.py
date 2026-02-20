@@ -87,4 +87,11 @@ def abuild(
             return container.wait()  # pyright: ignore[reportUnknownMemberType]
 
         finally:
+            if container.status == "running":  # pyright: ignore[reportUnknownMemberType]
+                try:
+                    container.stop()  # pyright: ignore[reportUnknownMemberType]
+
+                except Exception:
+                    pass
+
             container.remove()  # pyright: ignore[reportUnknownMemberType]
