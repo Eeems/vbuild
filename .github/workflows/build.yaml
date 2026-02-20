@@ -224,7 +224,7 @@ jobs:
           driver: ${{ matrix.driver }}
       - name: Run vbuild
         if: matrix.os == 'alpine'
-        shell: alpine.sh {0}
+        shell: alpine.sh --root {0}
         run: *run-vbuild-executable
         env:
           driver: ${{ matrix.driver }}
