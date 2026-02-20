@@ -70,8 +70,6 @@ jobs:
         with:
           python-version: 3.13
           cache: "pip"
-      - name: Run tests
-        run: make test
       - name: Run vbuild
         run: |
           set -e
@@ -86,6 +84,7 @@ jobs:
             done
           fi
           echo "Running vbuild..."
+          make .venv/bin/activate
           source .venv/bin/activate
           python -m vbuild -C "tests/${{ matrix.path }}" all
           if [ "$driver" == 'podman' ];then
