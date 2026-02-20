@@ -75,10 +75,10 @@ jobs:
           set -e
           if [ "$driver" == 'podman' ];then
             echo "Starting podman service..."
-            mkdir -p /run/user/"$UID"/podman
-            podman system service --time 0 unix:///run/user/"$UID"/podman/podman.sock &
+            mkdir -p /run/user/"$(id -u)"/podman
+            podman system service --time 0 unix:///run/user/"$(id -u)"/podman/podman.sock &
             tries=0
-            while [ ! -S /run/podman/podman.sock ] && [ $tries -lt 60 ];do
+            while [ ! -S /run/user/"$(id -u)"/podman/podman.sock ] && [ $tries -lt 60 ];do
               tries=$(( tries + 1 ))
               sleep 0.1
             done
@@ -206,15 +206,14 @@ jobs:
           if [ "$driver" == 'podman' ];then
             echo "Starting podman service..."
             mkdir -p /run/user/"$(id -u)"/podman
-            podman system service --time 0 unix:///run/user/"$UID"/podman/podman.sock &
+            podman system service --time 0 unix:///run/user/"$(id -u)"/podman/podman.sock &
             tries=0
-            while [ ! -S /run/podman/podman.sock ] && [ $tries -lt 60 ];do
+            while [ ! -S /run/user/"$(id -u)"/podman/podman.sock ] && [ $tries -lt 60 ];do
               tries=$(( tries + 1 ))
               sleep 0.1
             done
           fi
           echo "Running vbuild..."
-          ls -l dist
           chmod +x dist/vbuild
           dist/vbuild -C "tests/${{ matrix.path }}" all
           if [ "$driver" == 'podman' ];then
