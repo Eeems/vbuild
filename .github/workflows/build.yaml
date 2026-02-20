@@ -156,8 +156,7 @@ jobs:
           key: ${{ github.job }}-ccache-alpine
       - name: Build with nuitka
         shell: alpine.sh {0}
-        run: |
-          make executable
+        run: make executable
       - uses: actions/upload-artifact@v4
         with:
           name: vbuild-alpine
@@ -204,6 +203,7 @@ jobs:
             done
           fi
           echo "Running vbuild..."
+          chmod +x dist/vbuild
           dist/vbuild -C "tests/${{ matrix.path }}" all
           if [ "$driver" == 'podman' ];then
             echo "Stopping podman service..."
