@@ -204,7 +204,7 @@ jobs:
           set -e
           if [ "$driver" == 'podman' ];then
             echo "Starting podman service..."
-            mkdir -p /run/user/"$UID"/podman
+            mkdir -p /run/user/"$(id -u)"/podman
             podman system service --time 0 unix:///run/user/"$UID"/podman/podman.sock &
             tries=0
             while [ ! -S /run/podman/podman.sock ] && [ $tries -lt 60 ];do
