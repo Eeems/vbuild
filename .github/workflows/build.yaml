@@ -27,7 +27,7 @@ jobs:
             ls -l
             exit 1
           fi
-          content=$(jq -ncR '[inputs]' <<< $(find tests -mindepth 2 -maxdepth 2 -type f -name VELBUILD | xargs dirname | xargs basename))
+          content=$(jq -ncR '[inputs]' <<< $(find tests -mindepth 2 -maxdepth 2 -type f -name VELBUILD | xargs -rn1 dirname | xargs -rn1 basename))
           echo "$content"
           echo 'JSON_CONTENT<<EOF' >> $GITHUB_OUTPUT
           echo "$content" >> $GITHUB_OUTPUT
