@@ -16,7 +16,7 @@ SETUP_CONTAINER = [
     'mkdir -p /work/dist/"$CARCH"',
     "cp /root/.abuild/vbuild.rsa.pub /etc/apk/keys/",
     "if [ -d /work-src ]; then",
-    "    find package -maxdepth 1 -not \\( -name dist -and -type d \\) \\",
+    "    find /work-src -maxdepth 1 -not \\( -name dist -and -type d \\) \\",
     "    | xargs -I{} cp -r {} /work/",
     "fi"
 ]
@@ -79,14 +79,6 @@ def abuild(
         os.makedirs(distdir, exist_ok=True)
         run_kwargs:dict[str, Any] = {  # pyright: ignore[reportExplicitAny]
             'detach': True,
-            'mounts': [
-                {
-                    "type": "bind",
-                    "source": directory,
-                    "target": "/work",
-                    "relabel": "Z",
-                }
-            ],
             'volumes': {
                 distdir: {"bind": "/work/dist", "mode": "rw"},
                 distfiles: {"bind": "/var/cache/distfiles", "mode": "rw"},
