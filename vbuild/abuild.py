@@ -11,6 +11,7 @@ from . import containers
 SETUP_CONTAINER = [
     "set -e",
     'mkdir -p /work/dist/"$CARCH"',
+    "ls -l /root/.abuild/",
     "cp /root/.abuild/vbuild.rsa.pub /etc/apk/keys/",
 ]
 
