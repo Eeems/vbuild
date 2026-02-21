@@ -17,7 +17,6 @@ entware-rc@.service::https://raw.githubusercontent.com/$upstream_author/toltec/$
 rcctl::https://raw.githubusercontent.com/$upstream_author/toltec/$_commit/package/entware-rc/rcctl
 LICENSE::https://raw.githubusercontent.com/$upstream_author/toltec/$_commit/LICENSE
 "
-builddir="$srcdir/$pkgname-$pkgver"
 
 package() {
 	install -Dm644 "$srcdir/LICENSE" \
