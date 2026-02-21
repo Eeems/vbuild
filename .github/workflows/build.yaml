@@ -201,6 +201,11 @@ jobs:
             sudo
             ${{ matrix.driver }}
           volumes: /run:/run
+      - name: Setup docker
+        if: matrix.os == 'alpine' && matrix.driver == 'docker'
+        run: |
+          alpine.sh --root sh -c "addgroup -g $(getent group docker | cut -d: -f3) docker"
+          alpine.sh --root sh -c "addgroup runner docker"
       - name: Run vbuild
         if: matrix.os != 'alpine'
         shell: bash
