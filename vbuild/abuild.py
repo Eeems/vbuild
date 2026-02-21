@@ -11,8 +11,10 @@ from . import containers
 SETUP_CONTAINER = [
     "set -e",
     'mkdir -p /work/dist/"$CARCH"',
-    "ls -l /root/.abuild/",
     "cp /root/.abuild/vbuild.rsa.pub /etc/apk/keys/",
+]
+TEARDOWN_CONTAINER = [
+    f'chown -R {os.getuid()}:{os.getgid()} /work/*/'
 ]
 
 has_pulled = False
@@ -57,6 +59,8 @@ def abuild(
 
             has_pulled = True
 
+        distdir = os.path.join(directory, "dist")
+        os.makedirs(distdir, exist_ok=True)
         container = client.containers.run(  # pyright: ignore[reportUnknownMemberType]
             "ghcr.io/eeems/vbuild-builder:main",
             [
@@ -76,14 +80,22 @@ def abuild(
                                 action,
                             ]
                         ),
-                    ]
+                    ] + TEARDOWN_CONTAINER
                 ),
             ],
             detach=True,
+            mounts=[
+                {
+                    "type": "bind",
+                    "source": directory,
+                    "target": "/work",
+                    "relabel": "Z",
+                }
+            ],
             volumes={
-                directory: {"bind": "/work"},
-                distfiles: {"bind": "/var/cache/distfiles"},
-                abuilddir: {"bind": "/root/.abuild"},
+                distdir: {"bind": "/work/dist", "mode": "rw"},
+                distfiles: {"bind": "/var/cache/distfiles", "mode": "rw"},
+                abuilddir: {"bind": "/root/.abuild", "mode": "ro"},
             },
             environment={
                 "CARCH": os.environ.get("CARCH", "noarch"),
@@ -104,7 +116,12 @@ def abuild(
                 if x:
                     print(x, file=sys.stderr)
 
-            return container.wait()  # pyright: ignore[reportUnknownMemberType]
+            ret = container.wait()  # pyright: ignore[reportUnknownMemberType]
+            if isinstance(ret, dict):
+                ret = ret.get("StatusCode")  # pyright: ignore[reportUnknownMemberType, reportUnknownVariableType]
+
+            assert isinstance(ret, int)
+            return ret
 
         finally:
             if container.status == "running":  # pyright: ignore[reportUnknownMemberType]
