@@ -166,3 +166,16 @@ package/
 .ruff_cache/
 vbuild/cli/__names__.py
 nuikta-crash-report.xml
+
+tests/**/APKBUILD
+tests/**/*.pre-install
+tests/**/*.post-install
+tests/**/*.pre-upgrade
+tests/**/*.post-upgrade
+tests/**/*.pre-deinstall
+tests/**/*.post-deinstall
+tests/**/*.post-os-upgrade
+tests/**/pkg/
+tests/**/src/
+tests/**/dist/
+tests/**/tmp/

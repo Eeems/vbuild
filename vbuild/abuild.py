@@ -13,7 +13,11 @@ SETUP_CONTAINER = [
     'mkdir -p /work/dist/"$CARCH"',
     "cp /root/.abuild/vbuild.rsa.pub /etc/apk/keys/",
 ]
+TEARDOWN_CONTAINER = [
+    f'chown -R {os.getuid()}:{os.getgid()} /work/*/'
+]
 
+has_pulled = False
 
 def abuild(
     directory: str,
@@ -42,6 +46,21 @@ def abuild(
             _ = f.write("PACKAGER_PRIVKEY=/root/.abuild/vbuild.rsa")
 
     with containers.from_env() as client:
+        global has_pulled
+        if not has_pulled:
+            logs = containers.pull(client, "ghcr.io/eeems/vbuild-builder", "main")
+            for x in logs:
+                if isinstance(x, bytes):
+                    x = x.decode()
+
+                x = x.strip()
+                if x:
+                    print(x, file=sys.stderr)
+
+            has_pulled = True
+
+        distdir = os.path.join(directory, "dist")
+        os.makedirs(distdir, exist_ok=True)
         container = client.containers.run(  # pyright: ignore[reportUnknownMemberType]
             "ghcr.io/eeems/vbuild-builder:main",
             [
@@ -61,14 +80,22 @@ def abuild(
                                 action,
                             ]
                         ),
-                    ]
+                    ] + TEARDOWN_CONTAINER
                 ),
             ],
             detach=True,
+            mounts=[
+                {
+                    "type": "bind",
+                    "source": directory,
+                    "target": "/work",
+                    "relabel": "Z",
+                }
+            ],
             volumes={
-                directory: {"bind": "/work"},
-                distfiles: {"bind": "/var/cache/distfiles"},
-                abuilddir: {"bind": "/root/.abuild"},
+                distdir: {"bind": "/work/dist", "mode": "rw"},
+                distfiles: {"bind": "/var/cache/distfiles", "mode": "rw"},
+                abuilddir: {"bind": "/root/.abuild", "mode": "ro"},
             },
             environment={
                 "CARCH": os.environ.get("CARCH", "noarch"),
@@ -80,11 +107,21 @@ def abuild(
         assert not isinstance(container, Iterator)
         try:
             logs = container.logs(stream=True)  # pyright: ignore[reportUnknownMemberType]
-            assert isinstance(logs, Generator), f"Not a generator: {logs}"
             for x in logs:
-                print(x.decode(), file=sys.stderr, end="")
+                if isinstance(x, bytes):
+                    x = x.decode()
 
-            return container.wait()  # pyright: ignore[reportUnknownMemberType]
+                assert isinstance(x, str)
+                x = x.strip()
+                if x:
+                    print(x, file=sys.stderr)
+
+            ret = container.wait()  # pyright: ignore[reportUnknownMemberType]
+            if isinstance(ret, dict):
+                ret = ret.get("StatusCode")  # pyright: ignore[reportUnknownMemberType, reportUnknownVariableType]
+
+            assert isinstance(ret, int)
+            return ret
 
         finally:
             if container.status == "running":  # pyright: ignore[reportUnknownMemberType]
