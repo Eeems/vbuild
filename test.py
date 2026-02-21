@@ -35,6 +35,9 @@ _assert('quoted_string("${x}") == "\'${x}\'"', lambda: quoted_string("${x}"))
 _assert('quoted_string("$x") == "\'$x\'"', lambda: quoted_string("$x"))
 _assert('quoted_string("x${x}") == "\'x${x}\'"', lambda: quoted_string("x${x}"))
 _assert('quoted_string("x$x") == "\'x$x\'"', lambda: quoted_string("x$x"))
+_assert('quoted_string("") == ""', lambda: quoted_string(""))
+_assert('quoted_string("x$") == "\'x$\'"', lambda: quoted_string("x$"))
+_assert('quoted_string("x${") == "\'x${\'"', lambda: quoted_string("x${"))
 
 if FAILED:
     sys.exit(1)

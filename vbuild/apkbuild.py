@@ -37,7 +37,7 @@ def string_property(func: Callable[..., str | None]) -> property:
 def get_token(value:str, offset:int) -> tuple[int, str]:
     size = len(value)
     if offset >= size:
-        return (-1, "")
+        return (offset, "")
 
     token = value[offset]
     token_chars = string.ascii_letters + string.digits + "-_"
@@ -62,8 +62,9 @@ def get_token(value:str, offset:int) -> tuple[int, str]:
 def quoted_string(value:str) -> str:
     offset = 0
     quoted_value="'"
+    size = len(value)
     while True:
-        if offset >= len(value):
+        if offset >= size:
             break
 
         token = value[offset]
@@ -80,7 +81,7 @@ def quoted_string(value:str) -> str:
             source += name
             offset, next_token = get_token(value, offset)
             source += next_token
-            if next_token != "}":
+            if next_token != "}" and offset < size:
                 raise bash.BashSyntaxError(
                     f"Unexpected token: '{next_token}'. Expecting '}}'", value, 1
                 )
