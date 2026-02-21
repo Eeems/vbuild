@@ -14,7 +14,13 @@ def parse_progress(x: dict[str, Any]) -> str:  # pyright: ignore[reportExplicitA
         progress = d['current'] / d.get("total", 3)  # pyright: ignore[reportAny]
         progress = f" {progress:.1%}"
 
-    return f"{x.get("status", "")} {x.get("id", "")}{progress or ""}"
+    progress = progress or ""
+    status = x.get("status", "")  # pyright: ignore[reportAny]
+    identifier:str = x.get("id", "")  # pyright: ignore[reportAny]
+    if identifier:
+        identifier = " " + identifier
+
+    return f"{status}{identifier}{progress}"
 
 def pull(client: podman.PodmanClient | docker.DockerClient, repository: str, tag: str) -> Generator[str, None, None]:
     if isinstance(client, podman.PodmanClient):
