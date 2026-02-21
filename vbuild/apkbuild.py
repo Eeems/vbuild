@@ -40,13 +40,19 @@ def get_token(value:str, offset:int) -> tuple[int, str]:
         return (-1, "")
 
     token = value[offset]
+    token_chars = string.ascii_letters + string.digits + "-_"
+    if token not in token_chars:
+        offset += 1
+        return offset, token
+
     while True:
         offset += 1
-        next_char = value[offset]
         if offset >= size:
             break
 
-        if next_char not in string.ascii_letters + string.digits + "-_":
+        next_char = value[offset]
+
+        if next_char not in token_chars:
             break
 
         token += next_char
@@ -74,22 +80,27 @@ def quoted_string(value:str) -> str:
         source = "$" + name
         if name == "{":
             offset, name = get_token(value, offset)
-            source += name
             offset, next_token = get_token(value, offset)
-            source += next_token
             if next_token != "}":
                 raise bash.BashSyntaxError(
-                    f"Unexpected token: '{next_token}'. Expecting ')'", value, 1
+                    f"Unexpected token: '{next_token}'. Expecting '}}'", value, 1
                 )
 
         if name not in APKBUILD_AUTOMATIC_VARIABLES.keys():
             quoted_value = shlex.quote(source)[1:-1]
             continue
 
+        if quoted_value:
+            quoted_value += "'"
+
         quoted_value += f"${name}"
         quoted_value += "'"
 
-    return quoted_value + "'"
+    quoted_value += "'"
+    if quoted_value.endswith("''"):
+        quoted_value = quoted_value[:-2]
+
+    return quoted_value
 
 class APKBUILD:
     def __init__(self, variables: bash.Variables, functions: bash.Functions) -> None:

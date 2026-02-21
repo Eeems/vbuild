@@ -13,7 +13,7 @@ if grep -q "builddir=" APKBUILD; then
   echo '$builddir present'
   exit 1
 fi
-if grep -q "pkgdir=" APKBUILD; then
+if grep -qE '^pkgdir=' APKBUILD; then
   echo '$pkgdir present'
   exit 1
 fi
