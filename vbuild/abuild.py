@@ -2,6 +2,7 @@ import os
 import sys
 import shlex
 import docker
+import podman
 import subprocess
 
 from collections.abc import Generator
@@ -14,6 +15,10 @@ SETUP_CONTAINER = [
     "set -e",
     'mkdir -p /work/dist/"$CARCH"',
     "cp /root/.abuild/vbuild.rsa.pub /etc/apk/keys/",
+    "if [ -d /work-src ]; then",
+    "    find package -maxdepth 1 -not \\( -name dist -and -type d \\) \\",
+    "    | xargs -I{} cp -r {} /work/",
+    "fi"
 ]
 TEARDOWN_CONTAINER = [
     f'chown -R {os.getuid()}:{os.getgid()} /work/*/'
@@ -84,8 +89,26 @@ def abuild(
                 "REPODEST": "/work/dist",
             },
         }
-        if isinstance(client, docker.DockerClient):
-            run_kwargs["security_opt"] = ["apparmor:unconfined", "label:disable"]
+        if isinstance(client, podman.PodmanClient):  # pyright: ignore[reportUnnecessaryIsInstance]
+            run_kwargs['mounts'] = [
+                {
+                    "type": "bind",
+                    "source": directory,
+                    "target": "/work",
+                    "relabel": "O",
+                }
+            ]
+
+        elif isinstance(client, docker.DockerClient):  # pyright: ignore[reportUnnecessaryIsInstance]
+            run_kwargs['mounts'] = [
+                {
+                    "type": "bind",
+                    "source": directory,
+                    "target": "/work-src",
+                    "relabel": "Z",
+                    "mode": "ro"
+                }
+            ]
 
         container = client.containers.run(  # pyright: ignore[reportUnknownMemberType]
             "ghcr.io/eeems/vbuild-builder:main",
@@ -109,7 +132,7 @@ def abuild(
                     ] + TEARDOWN_CONTAINER
                 ),
             ],
-            **run_kwargs
+            **run_kwargs  # pyright: ignore[reportAny]
         )
         assert not isinstance(container, Generator)
         assert not isinstance(container, Iterator)
