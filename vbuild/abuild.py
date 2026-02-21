@@ -11,8 +11,6 @@ from . import containers
 SETUP_CONTAINER = [
     "set -e",
     'mkdir -p /work/dist/"$CARCH"',
-    "ls -l /root/.abuild",
-    "mount | grep .abuild",
     "cp /root/.abuild/vbuild.rsa.pub /etc/apk/keys/",
 ]
 TEARDOWN_CONTAINER = [

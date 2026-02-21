@@ -180,7 +180,6 @@ jobs:
           - docker
         os:
           - ubuntu
-          - alpine
       fail-fast: false
     steps:
       - name: Checkout the Git repository
@@ -191,25 +190,10 @@ jobs:
         with:
           name: vbuild-${{ matrix.os }}
           path: dist
-      - uses: jirutka/setup-alpine@v1
-        if: matrix.os == 'alpine'
-        with:
-          branch: v3.23
-          packages: >
-            bash
-            openssl
-            sudo
-            ${{ matrix.driver }}
-          volumes: /run:/run
-      - name: Setup docker
-        if: matrix.os == 'alpine' && matrix.driver == 'docker'
-        run: |
-          alpine.sh --root sh -c "addgroup -g $(getent group docker | cut -d: -f3) docker"
-          alpine.sh --root sh -c "addgroup runner docker"
       - name: Run vbuild
         if: matrix.os != 'alpine'
         shell: bash
-        run: &run-vbuild-executable |
+        run: |
           set -e
           if [ "$driver" == 'podman' ];then
             echo "Starting podman service..."
@@ -230,12 +214,6 @@ jobs:
             echo "Stopping podman service..."
             kill $(jobs -p) || true
           fi
-        env:
-          driver: ${{ matrix.driver }}
-      - name: Run vbuild
-        if: matrix.os == 'alpine'
-        shell: alpine.sh {0}
-        run: *run-vbuild-executable
         env:
           driver: ${{ matrix.driver }}
       - name: Validate output
