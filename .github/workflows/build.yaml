@@ -75,10 +75,12 @@ jobs:
           set -e
           if [ "$driver" == 'podman' ];then
             echo "Starting podman service..."
-            mkdir -p /run/user/"$(id -u)"/podman
-            podman system service --time 0 unix:///run/user/"$(id -u)"/podman/podman.sock &
+            sudo mkdir -p /run/user/"$(id -u)"/podman
+            socket=/run/user/"$(id -u)"/podman
+            sudo chown "$(id -u):$(id -g)" "$socket"
+            podman system service --time 0 unix://"$socket" &
             tries=0
-            while [ ! -S /run/user/"$(id -u)"/podman/podman.sock ] && [ $tries -lt 60 ];do
+            while [ ! -S "$socket" ] && [ $tries -lt 60 ];do
               tries=$(( tries + 1 ))
               sleep 0.1
             done
@@ -205,10 +207,12 @@ jobs:
           set -e
           if [ "$driver" == 'podman' ];then
             echo "Starting podman service..."
-            mkdir -p /run/user/"$(id -u)"/podman
-            podman system service --time 0 unix:///run/user/"$(id -u)"/podman/podman.sock &
+            sudo mkdir -p /run/user/"$(id -u)"/podman
+            socket=/run/user/"$(id -u)"/podman
+            sudo chown "$(id -u):$(id -g)" "$socket"
+            podman system service --time 0 unix://"$socket" &
             tries=0
-            while [ ! -S /run/user/"$(id -u)"/podman/podman.sock ] && [ $tries -lt 60 ];do
+            while [ ! -S "$socket" ] && [ $tries -lt 60 ];do
               tries=$(( tries + 1 ))
               sleep 0.1
             done
@@ -224,7 +228,7 @@ jobs:
           driver: ${{ matrix.driver }}
       - name: Run vbuild
         if: matrix.os == 'alpine'
-        shell: alpine.sh --root {0}
+        shell: alpine.sh {0}
         run: *run-vbuild-executable
         env:
           driver: ${{ matrix.driver }}

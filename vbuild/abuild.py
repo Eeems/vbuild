@@ -11,6 +11,8 @@ from . import containers
 SETUP_CONTAINER = [
     "set -e",
     'mkdir -p /work/dist/"$CARCH"',
+    "ls -l /root/.abuild",
+    "mount | grep .abuild",
     "cp /root/.abuild/vbuild.rsa.pub /etc/apk/keys/",
 ]
 TEARDOWN_CONTAINER = [
@@ -45,7 +47,6 @@ def abuild(
         with open(conf_path, "w") as f:
             _ = f.write("PACKAGER_PRIVKEY=/root/.abuild/vbuild.rsa")
 
-    _=os.system(f"ls -l {abuilddir}")  # pyright: ignore[reportDeprecated]
     with containers.from_env() as client:
         global has_pulled
         if not has_pulled:
