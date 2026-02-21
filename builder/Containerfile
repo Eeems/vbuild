@@ -1,3 +1,5 @@
 FROM alpine:3
 
-RUN apk add --no-cache alpine-sdk
+RUN apk add --no-cache \
+	alpine-sdk \
+	atools
