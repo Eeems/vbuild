@@ -85,8 +85,7 @@ def abuild(
             },
         }
         if isinstance(client, docker.DockerClient):
-            run_kwargs["security_opt"] = ["apparmor:unconfined"]
-            run_kwargs["security_opt"] = ["label:disable"]
+            run_kwargs["security_opt"] = ["apparmor:unconfined", "label:disable"]
 
         container = client.containers.run(  # pyright: ignore[reportUnknownMemberType]
             "ghcr.io/eeems/vbuild-builder:main",
