@@ -76,11 +76,11 @@ jobs:
           if [ "$driver" == 'podman' ];then
             echo "Starting podman service..."
             sudo mkdir -p /run/user/"$(id -u)"/podman
-            socket=/run/user/"$(id -u)"/podman
-            sudo chown "$(id -u):$(id -g)" "$socket"
-            podman system service --time 0 unix://"$socket" &
+            socketdir=/run/user/"$(id -u)"/podman
+            sudo chown "$(id -u):$(id -g)" "$socketdir"
+            sudo podman system service --time 0 unix://"$socketdir/podman.sock" &
             tries=0
-            while [ ! -S "$socket" ] && [ $tries -lt 60 ];do
+            while [ ! -S "$socketdir/podman.sock" ] && [ $tries -lt 60 ];do
               tries=$(( tries + 1 ))
               sleep 0.1
             done
@@ -214,11 +214,11 @@ jobs:
           if [ "$driver" == 'podman' ];then
             echo "Starting podman service..."
             sudo mkdir -p /run/user/"$(id -u)"/podman
-            socket=/run/user/"$(id -u)"/podman
-            sudo chown "$(id -u):$(id -g)" "$socket"
-            podman system service --time 0 unix://"$socket" &
+            socketdir=/run/user/"$(id -u)"/podman
+            sudo chown "$(id -u):$(id -g)" "$socketdir"
+            sudo podman system service --time 0 unix://"$socketdir/podman.sock" &
             tries=0
-            while [ ! -S "$socket" ] && [ $tries -lt 60 ];do
+            while [ ! -S "$socketdir/podman.sock" ] && [ $tries -lt 60 ];do
               tries=$(( tries + 1 ))
               sleep 0.1
             done
