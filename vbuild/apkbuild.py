@@ -61,7 +61,7 @@ def get_token(value:str, offset:int) -> tuple[int, str]:
 
 def quoted_string(value:str) -> str:
     offset = 0
-    quoted_value=""
+    quoted_value="'"
     while True:
         if offset >= len(value):
             break
@@ -70,9 +70,6 @@ def quoted_string(value:str) -> str:
         offset += 1
 
         if token != "$":
-            if not quoted_value:
-                quoted_value += "'"
-
             quoted_value += token
             continue
 
@@ -80,14 +77,16 @@ def quoted_string(value:str) -> str:
         source = "$" + name
         if name == "{":
             offset, name = get_token(value, offset)
+            source += name
             offset, next_token = get_token(value, offset)
+            source += next_token
             if next_token != "}":
                 raise bash.BashSyntaxError(
                     f"Unexpected token: '{next_token}'. Expecting '}}'", value, 1
                 )
 
         if name not in APKBUILD_AUTOMATIC_VARIABLES.keys():
-            quoted_value = shlex.quote(source)[1:-1]
+            quoted_value += shlex.quote(source)[1:-1]
             continue
 
         if quoted_value:
@@ -99,6 +98,9 @@ def quoted_string(value:str) -> str:
     quoted_value += "'"
     if quoted_value.endswith("''"):
         quoted_value = quoted_value[:-2]
+
+    if quoted_value.startswith("''"):
+        quoted_value = quoted_value[2:]
 
     return quoted_value
 

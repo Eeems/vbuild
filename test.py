@@ -31,6 +31,10 @@ _assert('quoted_string("x/$srcdir/x") == "\'x/\'$srcdir\'/x\'"', lambda: quoted_
 _assert('quoted_string("${srcdir}x") == "$srcdir\'x\'"', lambda: quoted_string("${srcdir}x"))
 _assert('quoted_string("${srcdir}/x") == "$srcdir\'/x\'"', lambda: quoted_string("${srcdir}/x"))
 _assert('quoted_string("$srcdir/x") == "$srcdir\'/x\'"', lambda: quoted_string("$srcdir/x"))
+_assert('quoted_string("${x}") == "\'${x}\'"', lambda: quoted_string("${x}"))
+_assert('quoted_string("$x") == "\'$x\'"', lambda: quoted_string("$x"))
+_assert('quoted_string("x${x}") == "\'x${x}\'"', lambda: quoted_string("x${x}"))
+_assert('quoted_string("x$x") == "\'x$x\'"', lambda: quoted_string("x$x"))
 
 if FAILED:
     sys.exit(1)
