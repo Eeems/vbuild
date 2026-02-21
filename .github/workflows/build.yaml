@@ -198,6 +198,7 @@ jobs:
           packages: >
             bash
             openssl
+            sudo
             ${{ matrix.driver }}
           volumes: /run:/run
       - name: Run vbuild
