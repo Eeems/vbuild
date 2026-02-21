@@ -1,5 +1,4 @@
 import os
-import shlex
 
 from collections.abc import Generator
 from inspect import cleandoc
@@ -8,6 +7,8 @@ from typing import override
 from . import bash
 
 from .apkbuild import APKBUILD
+from .apkbuild import APKBUILD_AUTOMATIC_VARIABLES
+from .apkbuild import quoted_string
 from .apkbuild import ErrorType
 from .apkbuild import string_property
 
@@ -38,28 +39,31 @@ class VELBUILD(APKBUILD):
             ):
                 continue
 
+            if name in APKBUILD_AUTOMATIC_VARIABLES.keys() and value == APKBUILD_AUTOMATIC_VARIABLES[name]:
+                continue
+
             if name in ("upstream_author", "category"):
                 name = f"_{name}"
 
             if isinstance(value, str):
-                lines.append(f"{name}={shlex.quote(value)}")
+                lines.append(f"{name}={quoted_string(value)}")
 
             elif isinstance(value, list):
                 lines.append(f"{name}=(")
                 for x in value:
                     if x is not None:
-                        lines.append(f"  {shlex.quote(x)}")
+                        lines.append(f"  {quoted_string(x)}")
 
                 lines.append(")")
 
             elif isinstance(value, dict):  # pyright: ignore[reportUnnecessaryIsInstance]
                 lines.append(f"{name}=(")
                 for k, v in value.items():
-                    lines.append(f"  [{k}]={shlex.quote(v)}")
+                    lines.append(f"  [{k}]={quoted_string(v)}")
 
                 lines.append(")")
 
-        lines.append(f"install={shlex.quote(self.install)}")  # pyright: ignore[reportAny]
+        lines.append(f"install={quoted_string(self.install)}")  # pyright: ignore[reportAny]
         for name, value in self.functions.items():
             if name not in INSTALL_FUNCTION_NAMES:
                 lines.append(f"{name}() {{{value}}}")
@@ -67,7 +71,7 @@ class VELBUILD(APKBUILD):
         if "sha512sums" in self.variables:
             value = self.variables["sha512sums"]
             assert isinstance(value, str)
-            lines.append(f"sha512sums={shlex.quote(value)}")
+            lines.append(f"sha512sums={quoted_string(value)}")
 
         return "\n".join(lines)
 
@@ -162,6 +166,6 @@ class VELBUILD(APKBUILD):
 
 def parse(path: str) -> VELBUILD:
     with open(path, "r") as f:
-        variables, functions = bash.parse(f.read())
+        variables, functions = bash.parse(f.read(), APKBUILD_AUTOMATIC_VARIABLES)
 
     return VELBUILD(variables, functions)
