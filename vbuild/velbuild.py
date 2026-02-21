@@ -63,7 +63,9 @@ class VELBUILD(APKBUILD):
 
                 lines.append(")")
 
-        lines.append(f"install={quoted_string(self.install)}")  # pyright: ignore[reportAny]
+        if self.install.strip():  # pyright: ignore[reportAny]
+            lines.append(f"install={quoted_string(self.install)}")  # pyright: ignore[reportAny]
+
         for name, value in self.functions.items():
             if name not in INSTALL_FUNCTION_NAMES:
                 lines.append(f"{name}() {{{value}}}")

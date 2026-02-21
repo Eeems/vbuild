@@ -5,7 +5,7 @@ source ../lib.sh
 ls -l
 exists APKBUILD
 exists dist/noarch/rmhacks-0.0.11_pre4-r0.apk
-if ! grep -q "builddir='x/'\$srcdir'/rm-hacks-qmd-1c617914af95e2d3b8f25c7c0fd71ef11e21b461/0.0.11-pre4'" APKBUILD; then
+if ! grep -q "builddir=\$srcdir'/rm-hacks-qmd-1c617914af95e2d3b8f25c7c0fd71ef11e21b461/0.0.11-pre4'" APKBUILD; then
   echo '$builddir not set properly'
   exit 1
 fi
