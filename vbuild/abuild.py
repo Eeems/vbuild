@@ -53,6 +53,15 @@ def abuild(
             _ = f.write("PACKAGER_PRIVKEY=/root/.abuild/vbuild.rsa")
 
     with containers.from_env() as client:
+        if isinstance(client, podman.PodmanClient):  # pyright: ignore[reportUnnecessaryIsInstance]
+            print('Container driver: Podman', file=sys.stderr)
+
+        elif isinstance(client, docker.DockerClient):  # pyright: ignore[reportUnnecessaryIsInstance]
+            print('Container driver: Docker', file=sys.stderr)
+
+        else:
+            print('Container driver: Unknown', file=sys.stderr)
+
         global has_pulled
         if not has_pulled:
             logs = containers.pull(client, "ghcr.io/eeems/vbuild-builder", "main")
