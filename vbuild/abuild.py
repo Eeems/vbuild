@@ -45,6 +45,7 @@ def abuild(
         with open(conf_path, "w") as f:
             _ = f.write("PACKAGER_PRIVKEY=/root/.abuild/vbuild.rsa")
 
+    _=os.system(f"ls -l {abuilddir}")  # pyright: ignore[reportDeprecated]
     with containers.from_env() as client:
         global has_pulled
         if not has_pulled:
