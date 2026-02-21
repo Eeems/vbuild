@@ -88,7 +88,11 @@ jobs:
           echo "Running vbuild..."
           make .venv/bin/activate
           source .venv/bin/activate
-          python -m vbuild -C "tests/${{ matrix.path }}" all
+          if [ "$driver" == 'podman' ];then
+            python -m vbuild -C "tests/${{ matrix.path }}" all
+          else
+            sudo python -m vbuild -C "tests/${{ matrix.path }}" all
+          fi
           if [ "$driver" == 'podman' ];then
             echo "Stopping podman service..."
             kill $(jobs -p) || true
