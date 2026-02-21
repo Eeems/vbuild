@@ -1,10 +1,12 @@
 import os
 import sys
 import shlex
+import docker
 import subprocess
 
 from collections.abc import Generator
 from collections.abc import Iterator
+from typing import Any
 
 from . import containers
 
@@ -61,6 +63,30 @@ def abuild(
 
         distdir = os.path.join(directory, "dist")
         os.makedirs(distdir, exist_ok=True)
+        run_kwargs:dict[str, Any] = {  # pyright: ignore[reportExplicitAny]
+            'detach': True,
+            'mounts': [
+                {
+                    "type": "bind",
+                    "source": directory,
+                    "target": "/work",
+                    "relabel": "Z",
+                }
+            ],
+            'volumes': {
+                distdir: {"bind": "/work/dist", "mode": "rw"},
+                distfiles: {"bind": "/var/cache/distfiles", "mode": "rw"},
+                abuilddir: {"bind": "/root/.abuild", "mode": "ro"},
+            },
+            'environment': {
+                "CARCH": os.environ.get("CARCH", "noarch"),
+                "SOURCE_DATE_EPOCH": "0",
+                "REPODEST": "/work/dist",
+            },
+        }
+        if isinstance(client, docker.DockerClient):
+            run_kwargs["cap_add"] = ["CHOWN", "FOWNER"]
+
         container = client.containers.run(  # pyright: ignore[reportUnknownMemberType]
             "ghcr.io/eeems/vbuild-builder:main",
             [
@@ -83,25 +109,7 @@ def abuild(
                     ] + TEARDOWN_CONTAINER
                 ),
             ],
-            detach=True,
-            mounts=[
-                {
-                    "type": "bind",
-                    "source": directory,
-                    "target": "/work",
-                    "relabel": "Z",
-                }
-            ],
-            volumes={
-                distdir: {"bind": "/work/dist", "mode": "rw"},
-                distfiles: {"bind": "/var/cache/distfiles", "mode": "rw"},
-                abuilddir: {"bind": "/root/.abuild", "mode": "ro"},
-            },
-            environment={
-                "CARCH": os.environ.get("CARCH", "noarch"),
-                "SOURCE_DATE_EPOCH": "0",
-                "REPODEST": "/work/dist",
-            },
+            **run_kwargs
         )
         assert not isinstance(container, Generator)
         assert not isinstance(container, Iterator)
