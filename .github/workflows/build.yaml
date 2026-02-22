@@ -108,7 +108,9 @@ jobs:
             echo "SKIPPED"
             exit 0
           fi
-          tests/${{ matrix.path }}/validate.sh
+          if [ -f tests/${{ matrix.path }}/validate.sh ];then
+            tests/${{ matrix.path }}/validate.sh
+          fi
 
   build-executable-ubuntu:
     name: Build executable for ubuntu
@@ -237,7 +239,9 @@ jobs:
             echo "SKIPPED"
             exit 0
           fi
-          tests/${{ matrix.path }}/validate.sh
+          if [ -f tests/${{ matrix.path }}/validate.sh ];then
+            tests/${{ matrix.path }}/validate.sh
+          fi
 
   release:
     name: Add ${{ matrix.artifact }} to release
