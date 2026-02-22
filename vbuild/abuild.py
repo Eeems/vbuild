@@ -1,23 +1,27 @@
 import os
 import sys
 import shlex
+import docker
+import podman
 import subprocess
 
 from collections.abc import Generator
 from collections.abc import Iterator
+from typing import Any
 
 from . import containers
 
 SETUP_CONTAINER = [
     "set -e",
-    'mkdir -p /work/dist/"$CARCH"',
     "cp /root/.abuild/vbuild.rsa.pub /etc/apk/keys/",
+    'mkdir -p /dist/"$CARCH" /work/src',
 ]
 TEARDOWN_CONTAINER = [
-    f'chown -R {os.getuid()}:{os.getgid()} /work/*/'
+    f"chown -R {os.getuid()}:{os.getgid()} /dist/.",
 ]
 
 has_pulled = False
+
 
 def abuild(
     directory: str,
@@ -46,6 +50,15 @@ def abuild(
             _ = f.write("PACKAGER_PRIVKEY=/root/.abuild/vbuild.rsa")
 
     with containers.from_env() as client:
+        if isinstance(client, podman.PodmanClient):  # pyright: ignore[reportUnnecessaryIsInstance]
+            print("Container driver: Podman", file=sys.stderr)
+
+        elif isinstance(client, docker.DockerClient):  # pyright: ignore[reportUnnecessaryIsInstance]
+            print("Container driver: Docker", file=sys.stderr)
+
+        else:
+            raise Exception("Container driver: Unknown")
+
         global has_pulled
         if not has_pulled:
             logs = containers.pull(client, "ghcr.io/eeems/vbuild-builder", "main")
@@ -59,49 +72,51 @@ def abuild(
 
             has_pulled = True
 
-        distdir = os.path.join(directory, "dist")
+        distdir = os.path.realpath(
+            os.environ.get("REPODEST", None) or os.path.join(directory, "dist")
+        )
         os.makedirs(distdir, exist_ok=True)
-        container = client.containers.run(  # pyright: ignore[reportUnknownMemberType]
-            "ghcr.io/eeems/vbuild-builder:main",
-            [
-                "sh",
-                "-c",
-                "\n".join(
-                    SETUP_CONTAINER
-                    + [
-                        shlex.join(
-                            [
-                                "abuild",
-                                "-C",
-                                "/work",
-                                "-d",
-                                "-r",
-                                "-F",
-                                action,
-                            ]
-                        ),
-                    ] + TEARDOWN_CONTAINER
-                ),
-            ],
-            detach=True,
-            mounts=[
+        os.makedirs(os.path.join(directory, "src"), exist_ok=True)
+        run_kwargs: dict[str, Any] = {  # pyright: ignore[reportExplicitAny]
+            "detach": True,
+            "volumes": {
+                distdir: {"bind": "/dist", "mode": "rw"},
+                distfiles: {"bind": "/var/cache/distfiles", "mode": "rw"},
+                abuilddir: {"bind": "/root/.abuild", "mode": "ro"},
+            },
+            "environment": {
+                "CARCH": os.environ.get("CARCH", "noarch"),
+                "SOURCE_DATE_EPOCH": "0",
+                "REPODEST": "/dist",
+            },
+        }
+        if isinstance(client, podman.PodmanClient):  # pyright: ignore[reportUnnecessaryIsInstance]
+            run_kwargs["mounts"] = [
                 {
                     "type": "bind",
                     "source": directory,
                     "target": "/work",
                     "relabel": "Z",
                 }
+            ]
+
+        elif isinstance(client, docker.DockerClient):  # pyright: ignore[reportUnnecessaryIsInstance]
+            run_kwargs["volumes"][directory] = {"bind": "/work", "mode": "Z"}
+
+        container = client.containers.run(  # pyright: ignore[reportUnknownMemberType]
+            "ghcr.io/eeems/vbuild-builder:main",
+            [
+                "sh",
+                "-c",
+                "\n".join(
+                    [
+                        *SETUP_CONTAINER,
+                        f"abuild -C /work -d -F -r {shlex.quote(action)}",
+                        *TEARDOWN_CONTAINER,
+                    ]
+                ),
             ],
-            volumes={
-                distdir: {"bind": "/work/dist", "mode": "rw"},
-                distfiles: {"bind": "/var/cache/distfiles", "mode": "rw"},
-                abuilddir: {"bind": "/root/.abuild", "mode": "ro"},
-            },
-            environment={
-                "CARCH": os.environ.get("CARCH", "noarch"),
-                "SOURCE_DATE_EPOCH": "0",
-                "REPODEST": "/work/dist",
-            },
+            **run_kwargs,  # pyright: ignore[reportAny]
         )
         assert not isinstance(container, Generator)
         assert not isinstance(container, Iterator)

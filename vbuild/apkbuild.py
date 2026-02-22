@@ -1,10 +1,19 @@
 import shlex
+import string
 
 from enum import Enum
 from typing import Callable
 from collections.abc import Generator
 
 from . import bash
+
+APKBUILD_AUTOMATIC_VARIABLES = {
+    "builddir": "$builddir",
+    "pkgdir": "$pkgdir",
+    "srcdir": "$srcdir",
+    "startdir": "$startdir",
+    "subpkgdir": "$subpkgdir",
+}
 
 
 class ErrorType(Enum):
@@ -27,6 +36,87 @@ def string_property(func: Callable[..., str | None]) -> property:
     return property(wrapper)
 
 
+def get_token(value: str, offset: int) -> tuple[int, str]:
+    size = len(value)
+    if offset >= size:
+        return (offset, "")
+
+    token = value[offset]
+    token_chars = string.ascii_letters + string.digits + "-_"
+    if token not in token_chars:
+        offset += 1
+        return offset, token
+
+    while True:
+        offset += 1
+        if offset >= size:
+            break
+
+        next_char = value[offset]
+
+        if next_char not in token_chars:
+            break
+
+        token += next_char
+
+    return offset, token
+
+
+def quoted_string(value: str) -> str:
+    offset = 0
+    quoted_value = ""
+    in_quote = False
+    size = len(value)
+    while True:
+        if offset >= size:
+            if in_quote:
+                quoted_value += "'"
+
+            break
+
+        token = value[offset]
+        offset += 1
+
+        if token != "$":
+            if not in_quote:
+                in_quote = True
+                quoted_value += "'"
+
+            if token == "'":
+                token = "\\'"
+
+            quoted_value += token
+            continue
+
+        offset, name = get_token(value, offset)
+        source = "$" + name
+        if name == "{":
+            offset, name = get_token(value, offset)
+            source += name
+            offset, next_token = get_token(value, offset)
+            source += next_token
+            if next_token != "}" and offset < size:
+                raise bash.BashSyntaxError(
+                    f"Unexpected token: '{next_token}'. Expecting '}}'", value, 1
+                )
+
+        if name not in APKBUILD_AUTOMATIC_VARIABLES.keys():
+            if not in_quote:
+                in_quote = True
+                quoted_value += "'"
+
+            quoted_value += shlex.quote(source)[1:-1]
+            continue
+
+        if in_quote:
+            in_quote = False
+            quoted_value += "'"
+
+        quoted_value += f"${name}"
+
+    return quoted_value
+
+
 class APKBUILD:
     def __init__(self, variables: bash.Variables, functions: bash.Functions) -> None:
         self.variables: bash.Variables = variables
@@ -40,21 +130,27 @@ class APKBUILD:
             if value is None or name in bash.DEFAULT_VARIABLE_NAMES:
                 continue
 
+            if (
+                name in APKBUILD_AUTOMATIC_VARIABLES.keys()
+                and value == APKBUILD_AUTOMATIC_VARIABLES[name]
+            ):
+                continue
+
             if isinstance(value, str):
-                lines.append(f"{name}={shlex.quote(value)}")
+                lines.append(f"{name}={quoted_string(value)}")
 
             elif isinstance(value, list):
                 lines.append(f"{name}=(")
                 for x in value:
                     if x is not None:
-                        lines.append(f"  {shlex.quote(x)}")
+                        lines.append(f"  {quoted_string(x)}")
 
                 lines.append(")")
 
             elif isinstance(value, dict):  # pyright: ignore[reportUnnecessaryIsInstance]
                 lines.append(f"{name}=(")
                 for k, v in value.items():
-                    lines.append(f"  [{k}]={shlex.quote(v)}")
+                    lines.append(f"  [{k}]={quoted_string(v)}")
 
                 lines.append(")")
 

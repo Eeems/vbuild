@@ -4,13 +4,9 @@ cd "$(dirname "$0")"
 source ../lib.sh
 ls -l
 exists APKBUILD
-exists entware-rc.post-install
-exists entware-rc.post-os-upgrade
-exists entware-rc.post-upgrade
-exists entware-rc.pre-deinstall
-exists dist/noarch/entware-rc-0.1-r0.apk
-if grep -q "builddir=" APKBUILD; then
-  echo '$builddir present'
+exists dist/noarch/rmhacks-0.0.11_pre4-r0.apk
+if ! grep -q "builddir=\$srcdir'/rm-hacks-qmd-1c617914af95e2d3b8f25c7c0fd71ef11e21b461/0.0.11-pre4'" APKBUILD; then
+  echo '$builddir not set properly'
   exit 1
 fi
 if grep -qE '^pkgdir=' APKBUILD; then

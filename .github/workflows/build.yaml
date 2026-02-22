@@ -27,7 +27,7 @@ jobs:
             ls -l
             exit 1
           fi
-          content=$(jq -ncR '[inputs]' <<< $(find tests -mindepth 2 -maxdepth 2 -type f -name VELBUILD | xargs dirname | xargs basename))
+          content=$(jq -ncR '[inputs]' <<< $(find tests -mindepth 2 -maxdepth 2 -type f -name VELBUILD | xargs -rn1 dirname | xargs -rn1 basename))
           echo "$content"
           echo 'JSON_CONTENT<<EOF' >> $GITHUB_OUTPUT
           echo "$content" >> $GITHUB_OUTPUT
@@ -73,12 +73,16 @@ jobs:
       - name: Run vbuild
         run: |
           set -e
+          if [ -f "tests/${{ matrix.path }}/$driver.skip" ];then
+            echo "SKIPPED"
+            exit 0
+          fi
           if [ "$driver" == 'podman' ];then
             echo "Starting podman service..."
             sudo mkdir -p /run/user/"$(id -u)"/podman
             socketdir=/run/user/"$(id -u)"/podman
             sudo chown "$(id -u):$(id -g)" "$socketdir"
-            sudo podman system service --time 0 unix://"$socketdir/podman.sock" &
+            podman system service --time 0 unix://"$socketdir/podman.sock" &
             tries=0
             while [ ! -S "$socketdir/podman.sock" ] && [ $tries -lt 60 ];do
               tries=$(( tries + 1 ))
@@ -88,7 +92,7 @@ jobs:
           echo "Running vbuild..."
           make .venv/bin/activate
           source .venv/bin/activate
-          python -m vbuild -C "tests/${{ matrix.path }}" all
+          VBUILD_DRIVER=$driver python -m vbuild -C "tests/${{ matrix.path }}" all
           if [ "$driver" == 'podman' ];then
             echo "Stopping podman service..."
             kill $(jobs -p) || true
@@ -100,6 +104,10 @@ jobs:
         shell: bash
         run: |
           set -e
+          if [ -f "tests/${{ matrix.path }}/${{ matrix.driver }}.skip" ];then
+            echo "SKIPPED"
+            exit 0
+          fi
           tests/${{ matrix.path }}/validate.sh
 
   build-executable-ubuntu:
@@ -195,12 +203,16 @@ jobs:
         shell: bash
         run: |
           set -e
+          if [ -f "tests/${{ matrix.path }}/$driver.skip" ];then
+            echo "SKIPPED"
+            exit 0
+          fi
           if [ "$driver" == 'podman' ];then
             echo "Starting podman service..."
             sudo mkdir -p /run/user/"$(id -u)"/podman
             socketdir=/run/user/"$(id -u)"/podman
             sudo chown "$(id -u):$(id -g)" "$socketdir"
-            sudo podman system service --time 0 unix://"$socketdir/podman.sock" &
+            podman system service --time 0 unix://"$socketdir/podman.sock" &
             tries=0
             while [ ! -S "$socketdir/podman.sock" ] && [ $tries -lt 60 ];do
               tries=$(( tries + 1 ))
@@ -209,7 +221,7 @@ jobs:
           fi
           echo "Running vbuild..."
           chmod +x dist/vbuild
-          dist/vbuild -C "tests/${{ matrix.path }}" all
+          VBUILD_DRIVER=$driver dist/vbuild -C "tests/${{ matrix.path }}" all
           if [ "$driver" == 'podman' ];then
             echo "Stopping podman service..."
             kill $(jobs -p) || true
@@ -221,6 +233,10 @@ jobs:
         shell: bash
         run: |
           set -e
+          if [ -f "tests/${{ matrix.path }}/${{ matrix.driver }}.skip" ];then
+            echo "SKIPPED"
+            exit 0
+          fi
           tests/${{ matrix.path }}/validate.sh
 
   release:

@@ -13,15 +13,15 @@ options="!check !fhs !strip !tracedeps"
 install="$pkgname.post-install $pkgname.post-upgrade $pkgname.pre-deinstall"
 _commit="c4ffc32a58765b27f49952640b616c2f48adb83b"
 source="
-entware-rc@.service::https://raw.githubusercontent.com/toltec-dev/toltec/$_commit/package/entware-rc/entware-rc%40.service
-rcctl::https://raw.githubusercontent.com/toltec-dev/toltec/$_commit/package/entware-rc/rcctl
-LICENSE::https://raw.githubusercontent.com/toltec-dev/toltec/refs/heads/stable/LICENSE
+entware-rc@.service::https://raw.githubusercontent.com/$upstream_author/toltec/$_commit/package/entware-rc/entware-rc%40.service
+rcctl::https://raw.githubusercontent.com/$upstream_author/toltec/$_commit/package/entware-rc/rcctl
+LICENSE::https://raw.githubusercontent.com/$upstream_author/toltec/$_commit/LICENSE
 "
 
 package() {
 	install -Dm644 "$srcdir/LICENSE" \
 		"$pkgdir/home/root/.vellum/licenses/$pkgname/LICENSE"
-	echo "https://github.com/$_upstream_author/toltec/tree/stable/package/entware-rc" > \
+	echo "https://github.com/$upstream_author/toltec/tree/stable/package/entware-rc" > \
 		"$pkgdir/home/root/.vellum/licenses/$pkgname/SOURCES"
 
 	install -D -m 666 -t "$pkgdir"/home/root/.vellum/share/$pkgname/ \
