@@ -86,6 +86,7 @@ jobs:
             done
             sudo chown -R "$(id -u):$(id -g)" "$socketdir"
             sudo chmod 777 "$socketdir/podman.sock"
+            export CONTAINER_HOST="unix://$socketdir/podman.sock"
           fi
           echo "Running vbuild..."
           make .venv/bin/activate
@@ -210,6 +211,7 @@ jobs:
             done
             sudo chown -R "$(id -u):$(id -g)" "$socketdir"
             sudo chmod 777 "$socketdir/podman.sock"
+            export CONTAINER_HOST="unix://$socketdir/podman.sock"
           fi
           echo "Running vbuild..."
           chmod +x dist/vbuild
