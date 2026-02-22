@@ -15,12 +15,14 @@ SETUP_CONTAINER = [
     "set -e",
     "cp /root/.abuild/vbuild.rsa.pub /etc/apk/keys/",
     'mkdir -p /dist/"$CARCH" /work/src',
+    "ls -l /work",
 ]
 TEARDOWN_CONTAINER = [
-    f'chown -R {os.getuid()}:{os.getgid()} /dist/.',
+    f"chown -R {os.getuid()}:{os.getgid()} /dist/.",
 ]
 
 has_pulled = False
+
 
 def abuild(
     directory: str,
@@ -50,13 +52,13 @@ def abuild(
 
     with containers.from_env() as client:
         if isinstance(client, podman.PodmanClient):  # pyright: ignore[reportUnnecessaryIsInstance]
-            print('Container driver: Podman', file=sys.stderr)
+            print("Container driver: Podman", file=sys.stderr)
 
         elif isinstance(client, docker.DockerClient):  # pyright: ignore[reportUnnecessaryIsInstance]
-            print('Container driver: Docker', file=sys.stderr)
+            print("Container driver: Docker", file=sys.stderr)
 
         else:
-            print('Container driver: Unknown', file=sys.stderr)
+            print("Container driver: Unknown", file=sys.stderr)
 
         global has_pulled
         if not has_pulled:
@@ -71,23 +73,26 @@ def abuild(
 
             has_pulled = True
 
-        distdir = os.path.realpath(os.environ.get("REPODEST", None) or os.path.join(directory, "dist"))
+        distdir = os.path.realpath(
+            os.environ.get("REPODEST", None) or os.path.join(directory, "dist")
+        )
         os.makedirs(distdir, exist_ok=True)
         srcdir = os.path.join(directory, "src")
         os.makedirs(srcdir, exist_ok=True)
-        run_kwargs:dict[str, Any] = {  # pyright: ignore[reportExplicitAny]
-            'detach': True,
-            'volumes': {
+        run_kwargs: dict[str, Any] = {  # pyright: ignore[reportExplicitAny]
+            "detach": True,
+            "volumes": {
                 directory: {"bind": "/work", "mode": "rw"},
                 distdir: {"bind": "/dist", "mode": "rw"},
                 distfiles: {"bind": "/var/cache/distfiles", "mode": "rw"},
                 abuilddir: {"bind": "/root/.abuild", "mode": "ro"},
             },
-            'environment': {
+            "environment": {
                 "CARCH": os.environ.get("CARCH", "noarch"),
                 "SOURCE_DATE_EPOCH": "0",
                 "REPODEST": "/dist",
             },
+            "userns_mode": "host",
         }
 
         container = client.containers.run(  # pyright: ignore[reportUnknownMemberType]
@@ -97,22 +102,11 @@ def abuild(
                 "-c",
                 "\n".join(
                     SETUP_CONTAINER
-                    + [
-                        shlex.join(
-                            [
-                                "abuild",
-                                "-C",
-                                "/work",
-                                "-d",
-                                "-r",
-                                "-F",
-                                action,
-                            ]
-                        ),
-                    ] + TEARDOWN_CONTAINER
+                    + [f"abuild -C /work -d -F -r {shlex.quote(action)}"]
+                    + TEARDOWN_CONTAINER
                 ),
             ],
-            **run_kwargs  # pyright: ignore[reportAny]
+            **run_kwargs,  # pyright: ignore[reportAny]
         )
         assert not isinstance(container, Generator)
         assert not isinstance(container, Iterator)

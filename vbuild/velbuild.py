@@ -39,7 +39,10 @@ class VELBUILD(APKBUILD):
             ):
                 continue
 
-            if name in APKBUILD_AUTOMATIC_VARIABLES.keys() and value == APKBUILD_AUTOMATIC_VARIABLES[name]:
+            if (
+                name in APKBUILD_AUTOMATIC_VARIABLES.keys()
+                and value == APKBUILD_AUTOMATIC_VARIABLES[name]
+            ):
                 continue
 
             if name in ("upstream_author", "category"):

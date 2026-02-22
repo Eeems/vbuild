@@ -129,7 +129,7 @@ class BashSyntaxError(Exception):
         super().__init__(f"{file}:L{lineno}: {msg}")
 
 
-def run_bash(src: str, env:dict[str,str] |None = None) -> str:
+def run_bash(src: str, env: dict[str, str] | None = None) -> str:
     env = {} if env is None else env.copy()
     env["PATH"] = os.environ["PATH"]
     process = subprocess.run(["bash"], input=src.encode(), capture_output=True, env=env)
@@ -151,8 +151,10 @@ def assert_token(lexer: shlex.shlex, value: str) -> str:
     return token or ""
 
 
-def parse(src: str, env:dict[str,str] |None = None) -> tuple[Variables, Functions]:
-    declarations = run_bash(src + "\n declare -f\n declare -p", {} if env is None else env)
+def parse(src: str, env: dict[str, str] | None = None) -> tuple[Variables, Functions]:
+    declarations = run_bash(
+        src + "\n declare -f\n declare -p", {} if env is None else env
+    )
     lexer = shlex.shlex(declarations, posix=True)
     lexer.wordchars = lexer.wordchars + "-"
     variables: Variables = {}

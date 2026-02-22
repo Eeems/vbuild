@@ -8,12 +8,13 @@ from collections.abc import Generator
 from . import bash
 
 APKBUILD_AUTOMATIC_VARIABLES = {
-    'builddir': '$builddir',
-    'pkgdir': '$pkgdir',
-    'srcdir': '$srcdir',
-    'startdir': '$startdir',
-    'subpkgdir': '$subpkgdir',
+    "builddir": "$builddir",
+    "pkgdir": "$pkgdir",
+    "srcdir": "$srcdir",
+    "startdir": "$startdir",
+    "subpkgdir": "$subpkgdir",
 }
+
 
 class ErrorType(Enum):
     Error = 1
@@ -34,7 +35,8 @@ def string_property(func: Callable[..., str | None]) -> property:
 
     return property(wrapper)
 
-def get_token(value:str, offset:int) -> tuple[int, str]:
+
+def get_token(value: str, offset: int) -> tuple[int, str]:
     size = len(value)
     if offset >= size:
         return (offset, "")
@@ -59,9 +61,10 @@ def get_token(value:str, offset:int) -> tuple[int, str]:
 
     return offset, token
 
-def quoted_string(value:str) -> str:
+
+def quoted_string(value: str) -> str:
     offset = 0
-    quoted_value=""
+    quoted_value = ""
     size = len(value)
     while True:
         if offset >= size:
@@ -111,6 +114,7 @@ def quoted_string(value:str) -> str:
 
     return quoted_value
 
+
 class APKBUILD:
     def __init__(self, variables: bash.Variables, functions: bash.Functions) -> None:
         self.variables: bash.Variables = variables
@@ -124,7 +128,10 @@ class APKBUILD:
             if value is None or name in bash.DEFAULT_VARIABLE_NAMES:
                 continue
 
-            if name in APKBUILD_AUTOMATIC_VARIABLES.keys() and value == APKBUILD_AUTOMATIC_VARIABLES[name]:
+            if (
+                name in APKBUILD_AUTOMATIC_VARIABLES.keys()
+                and value == APKBUILD_AUTOMATIC_VARIABLES[name]
+            ):
                 continue
 
             if isinstance(value, str):
