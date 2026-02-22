@@ -180,3 +180,4 @@ tests/**/pkg/
 tests/**/src/
 tests/**/dist/
 tests/**/tmp/
+nuitka-crash-report.xml

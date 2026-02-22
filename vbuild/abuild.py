@@ -16,9 +16,10 @@ SETUP_CONTAINER = [
     "cp /root/.abuild/vbuild.rsa.pub /etc/apk/keys/",
     'mkdir -p /dist/"$CARCH" /work/src',
 ]
-TEARDOWN_CONTAINER = [
+TEARDOWN_CONTAINER_DOCKER: list[str] = [
     f"chown -R {os.getuid()}:{os.getgid()} /dist/.",
 ]
+TEARDOWN_CONTAINER_PODMAN: list[str] = []
 
 has_pulled = False
 
@@ -90,18 +91,14 @@ def abuild(
                 "REPODEST": "/dist",
             },
         }
+        teardown = []
         if isinstance(client, podman.PodmanClient):  # pyright: ignore[reportUnnecessaryIsInstance]
-            run_kwargs["mounts"] = [
-                {
-                    "type": "bind",
-                    "source": directory,
-                    "target": "/work",
-                    "relabel": "Z",
-                }
-            ]
+            run_kwargs["volumes"][directory] = {"bind": "/work", "mode": "Z"}
+            teardown = TEARDOWN_CONTAINER_PODMAN
 
         elif isinstance(client, docker.DockerClient):  # pyright: ignore[reportUnnecessaryIsInstance]
             run_kwargs["volumes"][directory] = {"bind": "/work", "mode": "Z"}
+            teardown = TEARDOWN_CONTAINER_DOCKER
 
         container = client.containers.run(  # pyright: ignore[reportUnknownMemberType]
             "ghcr.io/eeems/vbuild-builder:main",
@@ -112,7 +109,7 @@ def abuild(
                     [
                         *SETUP_CONTAINER,
                         f"abuild -C /work -d -F -r {shlex.quote(action)}",
-                        *TEARDOWN_CONTAINER,
+                        *teardown,
                     ]
                 ),
             ],
