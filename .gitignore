@@ -167,6 +167,7 @@ package/
 vbuild/cli/__names__.py
 nuikta-crash-report.xml
 
+src/
 tests/**/APKBUILD
 tests/**/*.pre-install
 tests/**/*.post-install
