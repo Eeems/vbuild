@@ -1,7 +1,9 @@
 import argparse
 
-from subprocess import CalledProcessError
 from typing import cast
+from subprocess import CalledProcessError
+from rich_argparse import RichHelpFormatter
+from rich.markdown import Markdown
 
 from .__modules__ import modules
 from .__modules__ import commands
@@ -10,7 +12,21 @@ from .__modules__ import CommandCallable
 
 def main() -> int:
     try:
-        parser = argparse.ArgumentParser()
+        parser = argparse.ArgumentParser(
+            epilog=Markdown(
+                """
+ENVIRONMENT VARIBLES:
+---------------------
+
+  | Name | Description |
+  | ---- | ---------- |
+  | `$REPODEST` | Packages shall be stored in `$REPODEST/$repo/$arch/$pkgname-$pkgver-r$pkgrel.apk`, where `$repo` is the base name of the parent directory of `$startdir`. |
+  | `$CARCH` | Architecture to compile package as. |
+            """,
+                style="argeparse.txt",
+            ),
+            formatter_class=RichHelpFormatter,
+        )
         _ = parser.add_argument(
             "-C",
             help="Change directory to DIR before running any commands",
