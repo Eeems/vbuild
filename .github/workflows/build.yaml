@@ -125,6 +125,10 @@ jobs:
         with:
           python-version: 3.13
           cache: "pip"
+      - name: Install ccache
+        uses: Eeems-Org/apt-cache-action@v1
+        with:
+          packages: ccache
       - name: Nuitka ccache
         uses: actions/cache@v4
         with:
