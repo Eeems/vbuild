@@ -1,6 +1,7 @@
 import podman
 import docker
 import json
+import os
 
 from contextlib import contextmanager
 from collections.abc import Generator
@@ -37,10 +38,20 @@ def pull(client: podman.PodmanClient | docker.DockerClient, repository: str, tag
 @contextmanager
 def from_env() -> Generator[podman.PodmanClient, None, None]:
     errors:list[Exception] = []
-    for engine in [podman, docker]:
+    match os.environ.get("VBUILD_DRIVER", None):
+        case "podman":
+            drivers = [podman]
+
+        case "docker":
+            drivers = [docker]
+
+        case _:
+            drivers = [podman, docker]
+
+    for driver in drivers:
         client: podman.PodmanClient | None = None
         try:
-            client = cast(podman.PodmanClient, engine.from_env())  # pyright: ignore[reportAny]
+            client = cast(podman.PodmanClient, driver.from_env())  # pyright: ignore[reportAny]
             if not client.ping():
                 client.close()
                 continue
