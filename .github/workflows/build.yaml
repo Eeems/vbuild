@@ -79,12 +79,13 @@ jobs:
             socketdir=/run/user/"$(id -u)"/podman
             sudo chown "$(id -u):$(id -g)" "$socketdir"
             echo "Starting podman service on $socketdir/podman.sock"
-            podman system service --time 0 unix://"$socketdir/podman.sock" &
+            sudo podman system service --time 0 unix://"$socketdir/podman.sock" &
             tries=0
             while [ ! -S "$socketdir/podman.sock" ] && [ $tries -lt 60 ];do
               tries=$(( tries + 1 ))
               sleep 0.1
             done
+            sudo chmod 666 "$socketdir/podman.sock"
           fi
           echo "Running vbuild..."
           make .venv/bin/activate
@@ -202,12 +203,13 @@ jobs:
             socketdir=/run/user/"$(id -u)"/podman
             sudo chown "$(id -u):$(id -g)" "$socketdir"
             echo "Starting podman service on $socketdir/podman.sock"
-            podman system service --time 0 unix://"$socketdir/podman.sock" &
+            sudo podman system service --time 0 unix://"$socketdir/podman.sock" &
             tries=0
             while [ ! -S "$socketdir/podman.sock" ] && [ $tries -lt 60 ];do
               tries=$(( tries + 1 ))
               sleep 0.1
             done
+            sudo chmod 666 "$socketdir/podman.sock"
           fi
           echo "Running vbuild..."
           chmod +x dist/vbuild
