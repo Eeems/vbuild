@@ -13,14 +13,13 @@ from . import containers
 
 SETUP_CONTAINER = [
     "set -e",
-    'mkdir -p /work/dist/"$CARCH"',
     "cp /root/.abuild/vbuild.rsa.pub /etc/apk/keys/",
-    "find /work-src -maxdepth 1 -not \\( -name dist -and -type d \\) \\",
-    "| xargs -I{} cp -r {} /work/",
+    'mkdir -p /dist/"$CARCH" /work',
+    "cp -r /src/. /work/",
     "[ -d /work/src ] && ls -l /work/src || true",
 ]
 TEARDOWN_CONTAINER = [
-    f'chown -R {os.getuid()}:{os.getgid()} /work/*/'
+    f'chown -R {os.getuid()}:{os.getgid()} /dist/.'
 ]
 
 has_pulled = False
@@ -79,15 +78,15 @@ def abuild(
         run_kwargs:dict[str, Any] = {  # pyright: ignore[reportExplicitAny]
             'detach': True,
             'volumes': {
-                directory: {"bind": "/work-src", "mode": "ro"},
-                distdir: {"bind": "/work/dist", "mode": "rw"},
+                directory: {"bind": "/src", "mode": "ro"},
+                distdir: {"bind": "/dist", "mode": "rw"},
                 distfiles: {"bind": "/var/cache/distfiles", "mode": "rw"},
                 abuilddir: {"bind": "/root/.abuild", "mode": "ro"},
             },
             'environment': {
                 "CARCH": os.environ.get("CARCH", "noarch"),
                 "SOURCE_DATE_EPOCH": "0",
-                "REPODEST": "/work/dist",
+                "REPODEST": "/dist",
             },
         }
 
