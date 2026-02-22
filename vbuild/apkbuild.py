@@ -65,10 +65,11 @@ def get_token(value: str, offset: int) -> tuple[int, str]:
 def quoted_string(value: str) -> str:
     offset = 0
     quoted_value = ""
+    in_quote = False
     size = len(value)
     while True:
         if offset >= size:
-            if "'" in quoted_value:
+            if in_quote:
                 quoted_value += "'"
 
             break
@@ -77,7 +78,8 @@ def quoted_string(value: str) -> str:
         offset += 1
 
         if token != "$":
-            if not quoted_value:
+            if not in_quote:
+                in_quote = True
                 quoted_value += "'"
 
             if token == "'":
@@ -99,18 +101,18 @@ def quoted_string(value: str) -> str:
                 )
 
         if name not in APKBUILD_AUTOMATIC_VARIABLES.keys():
-            if not quoted_value:
+            if not in_quote:
+                in_quote = True
                 quoted_value += "'"
 
             quoted_value += shlex.quote(source)[1:-1]
             continue
 
-        if quoted_value:
+        if in_quote:
+            in_quote = False
             quoted_value += "'"
 
         quoted_value += f"${name}"
-        if offset < size:
-            quoted_value += "'"
 
     return quoted_value
 

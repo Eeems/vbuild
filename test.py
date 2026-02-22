@@ -31,6 +31,10 @@ _assert(
     lambda: quoted_string("x${srcdir}x"),
 )
 _assert(
+    "quoted_string(\"x${srcdir}\") == \"'x'$srcdir\"",
+    lambda: quoted_string("x${srcdir}"),
+)
+_assert(
     "quoted_string(\"x/${srcdir}/x\") == \"'x/'$srcdir'/x'\"",
     lambda: quoted_string("x/${srcdir}/x"),
 )
