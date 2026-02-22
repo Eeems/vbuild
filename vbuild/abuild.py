@@ -92,7 +92,6 @@ def abuild(
                 "SOURCE_DATE_EPOCH": "0",
                 "REPODEST": "/dist",
             },
-            "userns_mode": "host",
         }
 
         container = client.containers.run(  # pyright: ignore[reportUnknownMemberType]
