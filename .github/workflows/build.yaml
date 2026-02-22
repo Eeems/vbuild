@@ -73,20 +73,22 @@ jobs:
       - name: Run vbuild
         run: |
           set -e
+          if [ -f "tests/${{ matrix.path }}/$driver.skip" ];then
+            echo "SKIPPED"
+            exit 0
+          fi
           if [ "$driver" == 'podman' ];then
             echo "Starting podman service..."
             sudo mkdir -p /run/user/"$(id -u)"/podman
             socketdir=/run/user/"$(id -u)"/podman
+            sudo chown "$(id -u):$(id -g)" "$socketdir"
             echo "Starting podman service on $socketdir/podman.sock"
-            sudo podman system service --rootful --time 0 unix://"$socketdir/podman.sock" &
+            podman system service --rootful --time 0 unix://"$socketdir/podman.sock" &
             tries=0
             while [ ! -S "$socketdir/podman.sock" ] && [ $tries -lt 60 ];do
               tries=$(( tries + 1 ))
               sleep 0.1
             done
-            sudo chown -R "$(id -u):$(id -g)" "$socketdir"
-            sudo chmod 777 "$socketdir/podman.sock"
-            export CONTAINER_HOST="unix://$socketdir/podman.sock"
           fi
           echo "Running vbuild..."
           make .venv/bin/activate
@@ -103,6 +105,10 @@ jobs:
         shell: bash
         run: |
           set -e
+          if [ -f "tests/${{ matrix.path }}/${{ matrix.driver }}.skip" ];then
+            echo "SKIPPED"
+            exit 0
+          fi
           tests/${{ matrix.path }}/validate.sh
 
   build-executable-ubuntu:
@@ -198,20 +204,22 @@ jobs:
         shell: bash
         run: |
           set -e
+          if [ -f "tests/${{ matrix.path }}/$driver.skip" ];then
+            echo "SKIPPED"
+            exit 0
+          fi
           if [ "$driver" == 'podman' ];then
             echo "Starting podman service..."
             sudo mkdir -p /run/user/"$(id -u)"/podman
             socketdir=/run/user/"$(id -u)"/podman
+            sudo chown "$(id -u):$(id -g)" "$socketdir"
             echo "Starting podman service on $socketdir/podman.sock"
-            sudo podman system service --rootful --time 0 unix://"$socketdir/podman.sock" &
+            podman system service --rootful --time 0 unix://"$socketdir/podman.sock" &
             tries=0
             while [ ! -S "$socketdir/podman.sock" ] && [ $tries -lt 60 ];do
               tries=$(( tries + 1 ))
               sleep 0.1
             done
-            sudo chown -R "$(id -u):$(id -g)" "$socketdir"
-            sudo chmod 777 "$socketdir/podman.sock"
-            export CONTAINER_HOST="unix://$socketdir/podman.sock"
           fi
           echo "Running vbuild..."
           chmod +x dist/vbuild
@@ -227,6 +235,10 @@ jobs:
         shell: bash
         run: |
           set -e
+          if [ -f "tests/${{ matrix.path }}/${{ matrix.driver }}.skip" ];then
+            echo "SKIPPED"
+            exit 0
+          fi
           tests/${{ matrix.path }}/validate.sh
 
   release:
