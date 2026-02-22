@@ -15,10 +15,8 @@ SETUP_CONTAINER = [
     "set -e",
     'mkdir -p /work/dist/"$CARCH"',
     "cp /root/.abuild/vbuild.rsa.pub /etc/apk/keys/",
-    "if [ -d /work-src ]; then",
-    "    find /work-src -maxdepth 1 -not \\( -name dist -and -type d \\) \\",
-    "    | xargs -I{} cp -r {} /work/",
-    "fi"
+    "find /work-src -maxdepth 1 -not \\( -name dist -and -type d \\) \\",
+    "| xargs -I{} cp -r {} /work/",
 ]
 TEARDOWN_CONTAINER = [
     f'chown -R {os.getuid()}:{os.getgid()} /work/*/'
@@ -80,6 +78,7 @@ def abuild(
         run_kwargs:dict[str, Any] = {  # pyright: ignore[reportExplicitAny]
             'detach': True,
             'volumes': {
+                directory: {"bind": "/work-src", "mode": "ro"},
                 distdir: {"bind": "/work/dist", "mode": "rw"},
                 distfiles: {"bind": "/var/cache/distfiles", "mode": "rw"},
                 abuilddir: {"bind": "/root/.abuild", "mode": "ro"},
@@ -90,26 +89,6 @@ def abuild(
                 "REPODEST": "/work/dist",
             },
         }
-        if isinstance(client, podman.PodmanClient):  # pyright: ignore[reportUnnecessaryIsInstance]
-            run_kwargs['mounts'] = [
-                {
-                    "type": "bind",
-                    "source": directory,
-                    "target": "/work",
-                    "relabel": "O",
-                }
-            ]
-
-        elif isinstance(client, docker.DockerClient):  # pyright: ignore[reportUnnecessaryIsInstance]
-            run_kwargs['mounts'] = [
-                {
-                    "type": "bind",
-                    "source": directory,
-                    "target": "/work-src",
-                    "relabel": "Z",
-                    "mode": "ro"
-                }
-            ]
 
         container = client.containers.run(  # pyright: ignore[reportUnknownMemberType]
             "ghcr.io/eeems/vbuild-builder:main",
