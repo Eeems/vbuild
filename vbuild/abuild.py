@@ -15,7 +15,6 @@ SETUP_CONTAINER = [
     "set -e",
     "cp /root/.abuild/vbuild.rsa.pub /etc/apk/keys/",
     'mkdir -p /dist/"$CARCH" /work/src',
-    "ls -l /work",
 ]
 TEARDOWN_CONTAINER = [
     f"chown -R {os.getuid()}:{os.getgid()} /dist/.",
