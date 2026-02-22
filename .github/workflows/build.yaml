@@ -78,7 +78,7 @@ jobs:
             sudo mkdir -p /run/user/"$(id -u)"/podman
             socketdir=/run/user/"$(id -u)"/podman
             echo "Starting podman service on $socketdir/podman.sock"
-            sudo podman system service --time 0 unix://"$socketdir/podman.sock" &
+            sudo podman system service --rootful --time 0 unix://"$socketdir/podman.sock" &
             tries=0
             while [ ! -S "$socketdir/podman.sock" ] && [ $tries -lt 60 ];do
               tries=$(( tries + 1 ))
@@ -202,7 +202,7 @@ jobs:
             sudo mkdir -p /run/user/"$(id -u)"/podman
             socketdir=/run/user/"$(id -u)"/podman
             echo "Starting podman service on $socketdir/podman.sock"
-            sudo podman system service --time 0 unix://"$socketdir/podman.sock" &
+            sudo podman system service --rootful --time 0 unix://"$socketdir/podman.sock" &
             tries=0
             while [ ! -S "$socketdir/podman.sock" ] && [ $tries -lt 60 ];do
               tries=$(( tries + 1 ))
