@@ -15,11 +15,9 @@ SETUP_CONTAINER = [
     "set -e",
     "cp /root/.abuild/vbuild.rsa.pub /etc/apk/keys/",
     'mkdir -p /dist/"$CARCH" /work/src',
-    "cp -r /work-src/. /work/",
 ]
 TEARDOWN_CONTAINER = [
     f'chown -R {os.getuid()}:{os.getgid()} /dist/.',
-    f'chown -R {os.getuid()}:{os.getgid()} /src/.',
 ]
 
 has_pulled = False
@@ -75,13 +73,12 @@ def abuild(
 
         distdir = os.path.realpath(os.environ.get("REPODEST", None) or os.path.join(directory, "dist"))
         os.makedirs(distdir, exist_ok=True)
-        srcdir = os.path.realpath(os.environ.get("SRCDEST", None) or os.path.join(directory, "src"))
+        srcdir = os.path.join(directory, "src")
         os.makedirs(srcdir, exist_ok=True)
         run_kwargs:dict[str, Any] = {  # pyright: ignore[reportExplicitAny]
             'detach': True,
             'volumes': {
-                directory: {"bind": "/work-src", "mode": "ro"},
-                srcdir: {"bind": "/src", "mode": "rw"},
+                directory: {"bind": "/work", "mode": "rw"},
                 distdir: {"bind": "/dist", "mode": "rw"},
                 distfiles: {"bind": "/var/cache/distfiles", "mode": "rw"},
                 abuilddir: {"bind": "/root/.abuild", "mode": "ro"},
@@ -90,7 +87,6 @@ def abuild(
                 "CARCH": os.environ.get("CARCH", "noarch"),
                 "SOURCE_DATE_EPOCH": "0",
                 "REPODEST": "/dist",
-                "SRCDEST": "/src",
             },
         }
 
