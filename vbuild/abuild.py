@@ -80,8 +80,15 @@ def abuild(
         os.makedirs(srcdir, exist_ok=True)
         run_kwargs: dict[str, Any] = {  # pyright: ignore[reportExplicitAny]
             "detach": True,
+            'mounts': [
+                {
+                    "type": "bind",
+                    "source": directory,
+                    "target": "/work",
+                    "relabel": "Z",
+                }
+            ],
             "volumes": {
-                directory: {"bind": "/work", "mode": "rw"},
                 distdir: {"bind": "/dist", "mode": "rw"},
                 distfiles: {"bind": "/var/cache/distfiles", "mode": "rw"},
                 abuilddir: {"bind": "/root/.abuild", "mode": "ro"},
