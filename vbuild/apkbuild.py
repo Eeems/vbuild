@@ -78,14 +78,21 @@ def quoted_string(value: str) -> str:
         offset += 1
 
         if token != "$":
-            if not in_quote:
-                in_quote = True
+            if token != "'":
+                if not in_quote:
+                    in_quote = True
+                    quoted_value += "'"
+
+                quoted_value += token
+                continue
+
+            if in_quote:
                 quoted_value += "'"
 
-            if token == "'":
-                token = "\\'"
+            quoted_value += '"\'"'
+            if in_quote:
+                quoted_value += "'"
 
-            quoted_value += token
             continue
 
         offset, name = get_token(value, offset)
