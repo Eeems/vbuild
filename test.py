@@ -5,7 +5,7 @@ import sys
 from typing import Callable
 from typing import Any
 
-from vbuild.apkbuild import quoted_string
+from vbuild.apkbuild import quoted_string  # pyright: ignore[reportImplicitRelativeImport]
 
 FAILED = False
 

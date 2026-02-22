@@ -79,13 +79,6 @@ def abuild(
         os.makedirs(os.path.join(directory, "src"), exist_ok=True)
         run_kwargs: dict[str, Any] = {  # pyright: ignore[reportExplicitAny]
             "detach": True,
-            "mounts": [
-                {
-                    "type": "bind",
-                    "source": directory,
-                    "target": "/work",
-                }
-            ],
             "volumes": {
                 distdir: {"bind": "/dist", "mode": "rw"},
                 distfiles: {"bind": "/var/cache/distfiles", "mode": "rw"},
@@ -98,10 +91,17 @@ def abuild(
             },
         }
         if isinstance(client, podman.PodmanClient):  # pyright: ignore[reportUnnecessaryIsInstance]
-            run_kwargs["mounts"][0]["relabel"] = "Z"
+            run_kwargs["mounts"] = [
+                {
+                    "type": "bind",
+                    "source": directory,
+                    "target": "/work",
+                    "relabel": "Z",
+                }
+            ]
 
         elif isinstance(client, docker.DockerClient):  # pyright: ignore[reportUnnecessaryIsInstance]
-            run_kwargs["mounts"][0]["mode"] = "rw,Z"
+            run_kwargs["volumes"][directory] = {"bind": "/work", "mode": "Z"}
 
         container = client.containers.run(  # pyright: ignore[reportUnknownMemberType]
             "ghcr.io/eeems/vbuild-builder:main",
