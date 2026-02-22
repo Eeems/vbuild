@@ -85,7 +85,6 @@ def abuild(
                     "type": "bind",
                     "source": directory,
                     "target": "/work",
-                    "relabel": "Z",
                 }
             ],
             "volumes": {
@@ -99,6 +98,11 @@ def abuild(
                 "REPODEST": "/dist",
             },
         }
+        if isinstance(client, podman.PodmanClient):  # pyright: ignore[reportUnnecessaryIsInstance]
+            run_kwargs['mounts'][0]['relabel'] = "Z"
+
+        elif isinstance(client, docker.DockerClient):  # pyright: ignore[reportUnnecessaryIsInstance]
+            run_kwargs['mounts'][0]['mode'] = "rw,Z"
 
         container = client.containers.run(  # pyright: ignore[reportUnknownMemberType]
             "ghcr.io/eeems/vbuild-builder:main",
