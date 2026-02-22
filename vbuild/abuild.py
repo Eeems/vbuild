@@ -57,7 +57,7 @@ def abuild(
             print("Container driver: Docker", file=sys.stderr)
 
         else:
-            print("Container driver: Unknown", file=sys.stderr)
+            raise Exception("Container driver: Unknown")
 
         global has_pulled
         if not has_pulled:
@@ -76,11 +76,10 @@ def abuild(
             os.environ.get("REPODEST", None) or os.path.join(directory, "dist")
         )
         os.makedirs(distdir, exist_ok=True)
-        srcdir = os.path.join(directory, "src")
-        os.makedirs(srcdir, exist_ok=True)
+        os.makedirs(os.path.join(directory, "src"), exist_ok=True)
         run_kwargs: dict[str, Any] = {  # pyright: ignore[reportExplicitAny]
             "detach": True,
-            'mounts': [
+            "mounts": [
                 {
                     "type": "bind",
                     "source": directory,
@@ -99,10 +98,10 @@ def abuild(
             },
         }
         if isinstance(client, podman.PodmanClient):  # pyright: ignore[reportUnnecessaryIsInstance]
-            run_kwargs['mounts'][0]['relabel'] = "Z"
+            run_kwargs["mounts"][0]["relabel"] = "Z"
 
         elif isinstance(client, docker.DockerClient):  # pyright: ignore[reportUnnecessaryIsInstance]
-            run_kwargs['mounts'][0]['mode'] = "rw,Z"
+            run_kwargs["mounts"][0]["mode"] = "rw,Z"
 
         container = client.containers.run(  # pyright: ignore[reportUnknownMemberType]
             "ghcr.io/eeems/vbuild-builder:main",
@@ -110,9 +109,11 @@ def abuild(
                 "sh",
                 "-c",
                 "\n".join(
-                    SETUP_CONTAINER
-                    + [f"abuild -C /work -d -F -r {shlex.quote(action)}"]
-                    + TEARDOWN_CONTAINER
+                    [
+                        *SETUP_CONTAINER,
+                        f"abuild -C /work -d -F -r {shlex.quote(action)}",
+                        *TEARDOWN_CONTAINER,
+                    ]
                 ),
             ],
             **run_kwargs,  # pyright: ignore[reportAny]
