@@ -17,6 +17,7 @@ SETUP_CONTAINER = [
     "cp /root/.abuild/vbuild.rsa.pub /etc/apk/keys/",
     "find /work-src -maxdepth 1 -not \\( -name dist -and -type d \\) \\",
     "| xargs -I{} cp -r {} /work/",
+    "[ -d /work/src ] && ls -l /work/src || true",
 ]
 TEARDOWN_CONTAINER = [
     f'chown -R {os.getuid()}:{os.getgid()} /work/*/'
