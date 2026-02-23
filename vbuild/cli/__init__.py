@@ -22,6 +22,8 @@ ENVIRONMENT VARIBLES:
   | ---- | ---------- |
   | `$REPODEST` | Packages shall be stored in `$REPODEST/$repo/$arch/$pkgname-$pkgver-r$pkgrel.apk`, where `$repo` is the base name of the parent directory of `$startdir`. |
   | `$CARCH` | Architecture to compile package as. |
+  | `$VBUILD_KEY_NAME` | Key name to use when signing packages. |
+  | `$VBUILD_DRIVER` | Driver to use for running containers. Possible values are `podman` and `docker`. |
             """,
                 style="argeparse.txt",
             ),

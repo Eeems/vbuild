@@ -11,9 +11,11 @@ from typing import Any
 
 from . import containers
 
+KEY_NAME = os.environ.get("VBUILD_KEY_NAME", "vbuild")
+
 SETUP_CONTAINER = [
     "set -e",
-    "cp /root/.abuild/vbuild.rsa.pub /etc/apk/keys/",
+    f"cp /root/.abuild/{KEY_NAME}.rsa.pub /etc/apk/keys/",
     'mkdir -p /dist/"$CARCH" /work/src',
 ]
 TEARDOWN_CONTAINER_DOCKER: list[str] = [
@@ -36,7 +38,7 @@ def abuild(
         raise FileNotFoundError(filepath)
 
     abuilddir = os.path.expanduser("~/.config/vbuild")
-    key_path = os.path.join(abuilddir, "vbuild.rsa")
+    key_path = os.path.join(abuilddir, f"{KEY_NAME}.rsa")
     os.makedirs(abuilddir, exist_ok=True)
     if not os.path.exists(key_path):
         _ = subprocess.check_call(["openssl", "genrsa", "-out", key_path])
@@ -46,9 +48,16 @@ def abuild(
         os.chmod(key_path, 0o600)
 
     conf_path = os.path.join(abuilddir, "abuild.conf")
-    if not os.path.exists(conf_path):
-        with open(conf_path, "w") as f:
-            _ = f.write("PACKAGER_PRIVKEY=/root/.abuild/vbuild.rsa")
+    lines: list[str] = [f"PACKAGER_PRIVKEY=/root/.abuild/{KEY_NAME}.rsa\n"]
+    if os.path.exists(conf_path):
+        with open(conf_path, "r") as f:
+            for line in f.readlines():
+                if not line.startswith("PACKAGER_PRIVKEY="):
+                    lines.append(line)
+
+    with open(conf_path, "w") as f:
+        _ = f.truncate()
+        f.writelines(lines)
 
     with containers.from_env() as client:
         if isinstance(client, podman.PodmanClient):  # pyright: ignore[reportUnnecessaryIsInstance]
