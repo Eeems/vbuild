@@ -82,7 +82,7 @@ class VELBUILD(APKBUILD):
 
     def save(self, path: str):
         with open(os.path.join(path, "APKBUILD"), "w") as f:
-            _ = f.write(self.text)
+            _ = f.write(self.text + "\n")
 
         for name, _ in INSTALL_FUNCTION_NAME_MAP.items():
             src = getattr(self, name)  # pyright: ignore[reportAny]
