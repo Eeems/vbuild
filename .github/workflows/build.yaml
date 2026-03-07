@@ -92,7 +92,11 @@ jobs:
           echo "Running vbuild..."
           make .venv/bin/activate
           source .venv/bin/activate
-          VBUILD_DRIVER=$driver python -m vbuild -C "tests/${{ matrix.path }}" all
+          action=all
+          if [ -f "tests/${{ matrix.path }}/action" ];then
+            action="$(cat "tests/${{ matrix.path }}/action")"
+          fi
+          VBUILD_DRIVER=$driver python -m vbuild -C "tests/${{ matrix.path }}" "$action"
           if [ "$driver" == 'podman' ];then
             echo "Stopping podman service..."
             kill $(jobs -p) || true
@@ -227,7 +231,11 @@ jobs:
           fi
           echo "Running vbuild..."
           chmod +x dist/vbuild
-          VBUILD_DRIVER=$driver dist/vbuild -C "tests/${{ matrix.path }}" all
+          action=all
+          if [ -f "tests/${{ matrix.path }}/action" ];then
+            action="$(cat "tests/${{ matrix.path }}/action")"
+          fi
+          VBUILD_DRIVER=$driver dist/vbuild -C "tests/${{ matrix.path }}" "$action"
           if [ "$driver" == 'podman' ];then
             echo "Stopping podman service..."
             kill $(jobs -p) || true
