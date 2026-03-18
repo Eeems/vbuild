@@ -73,7 +73,7 @@ class VELBUILD(APKBUILD):
             if name in INSTALL_FUNCTION_NAMES:
                 continue
 
-            if name == "package" and self.postosupgrade:
+            if name == "package" and self.postosupgrade is not None:
                 fn_name = INSTALL_FUNCTION_NAME_MAP['postosupgrade']
                 tab = " " * 4
                 value += f'{tab}install -Dm755 "$startdir"/"$pkgname".{fn_name} "$pkgdir"/home/root/.vellum/hooks/post-os-upgrade/"$pkgname";\n'
