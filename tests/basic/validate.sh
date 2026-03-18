@@ -36,7 +36,7 @@ if grep -q "subpkgdir=" APKBUILD; then
   exit 1
 fi
 # shellcheck disable=SC2016
-if ! grep -q 'install -Dm755 "$startdir"/"$pkgname".post-os-upgrade "$pkgdir"/home/root/.vellum/hooks/post-os-upgrade/"$pkgname";' APKBUILD; then
+if ! grep -Fq 'install -Dm755 "$startdir"/"$pkgname".post-os-upgrade "$pkgdir"/home/root/.vellum/hooks/post-os-upgrade/"$pkgname";' APKBUILD; then
   echo "post-os-upgrade install line missing"
   exit 1
 fi
