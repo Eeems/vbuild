@@ -70,8 +70,15 @@ class VELBUILD(APKBUILD):
             lines.append(f"install={quoted_string(self.install)}")  # pyright: ignore[reportAny]
 
         for name, value in self.functions.items():
-            if name not in INSTALL_FUNCTION_NAMES:
-                lines.append(f"{name}() {{{value}}}")
+            if name in INSTALL_FUNCTION_NAMES:
+                continue
+
+            if name == "package" and self.postosupgrade:
+                fn_name = INSTALL_FUNCTION_NAME_MAP['postosupgrade']
+                tab = " " * 4
+                value += f'{tab}install -Dm755 "$startdir"/"$pkgname".{fn_name} "$pkgdir"/home/root/.vellum/hooks/post-os-upgrade/"$pkgname";\n'
+
+            lines.append(f"{name}() {{{value}}}")
 
         if "sha512sums" in self.variables:
             value = self.variables["sha512sums"]
