@@ -96,7 +96,7 @@ def abuild(
             },
             "environment": {
                 "CARCH": os.environ.get("CARCH", "noarch"),
-                "SOURCE_DATE_EPOCH": "0",
+                "SOURCE_DATE_EPOCH": os.environ.get("SOURCE_DATE_EPOCH", "0"),
                 "REPODEST": "/dist",
             },
         }
