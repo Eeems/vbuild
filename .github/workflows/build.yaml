@@ -16,7 +16,7 @@ jobs:
       paths: ${{ steps.paths.outputs.JSON_CONTENT }}
     steps:
       - name: Checkout the Git repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
       - name: Output matrix
         id: paths
         run: |
@@ -44,8 +44,8 @@ jobs:
       fail-fast: false
     steps:
       - name: Checkout the Git repository
-        uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+        uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
         with:
           python-version: ${{ matrix.python }}
           cache: "pip"
@@ -65,8 +65,8 @@ jobs:
       fail-fast: false
     steps:
       - name: Checkout the Git repository
-        uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+        uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
         with:
           python-version: 3.13
           cache: "pip"
@@ -124,8 +124,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout the Git repository
-        uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+        uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
         with:
           python-version: 3.13
           cache: "pip"
@@ -154,7 +154,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout the Git repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
       - uses: jirutka/setup-alpine@v1
         with:
           branch: v3.23
@@ -201,7 +201,7 @@ jobs:
       fail-fast: false
     steps:
       - name: Checkout the Git repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
       - name: Download executable
         id: download
         uses: actions/download-artifact@v4
@@ -269,7 +269,7 @@ jobs:
       contents: write
     steps:
       - name: Checkout the Git repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
       - name: Download executable
         id: download
         uses: actions/download-artifact@v4
