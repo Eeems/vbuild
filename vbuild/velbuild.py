@@ -1,4 +1,5 @@
 import os
+import copy
 
 from collections.abc import Generator
 from inspect import cleandoc
@@ -11,6 +12,7 @@ from .apkbuild import APKBUILD_AUTOMATIC_VARIABLES
 from .apkbuild import quoted_string
 from .apkbuild import ErrorType
 from .apkbuild import string_property
+from .apkbuild import put_variables
 
 
 INSTALL_FUNCTION_NAME_MAP = {
@@ -69,8 +71,9 @@ class VELBUILD(APKBUILD):
         if self.install.strip():  # pyright: ignore[reportAny]
             lines.append(f"install={quoted_string(self.install)}")  # pyright: ignore[reportAny]
 
+        subpackages = self.subpackages
         for name, value in self.functions.items():
-            if name in INSTALL_FUNCTION_NAMES:
+            if name in INSTALL_FUNCTION_NAMES or name in self.subpackages.values():
                 continue
 
             if name == "package" and self.postosupgrade is not None:
@@ -78,6 +81,9 @@ class VELBUILD(APKBUILD):
                 tab = " " * 4
                 value += f'{tab}install -Dm755 "$startdir"/"$pkgname".{fn_name} "$pkgdir"/home/root/.vellum/hooks/post-os-upgrade/"$pkgname";\n'
 
+            lines.append(f"{name}() {{{value}}}")
+
+        for name, value in subpackages.items():
             lines.append(f"{name}() {{{value}}}")
 
         if "sha512sums" in self.variables:

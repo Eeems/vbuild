@@ -1,3 +1,4 @@
+import copy
 import shlex
 import string
 
@@ -160,6 +161,39 @@ def quoted_string(value: str) -> str:
     return quoted_value
 
 
+def put_variables(variables: bash.Variables) -> str:
+    lines: list[str] = []
+    for name, value in variables.items():
+        if name in bash.DEFAULT_VARIABLE_NAMES:
+            continue
+
+        if value is None:
+            lines.append(f"declare -- {name}\n")
+
+        elif isinstance(value, str):
+            lines.append(f"declare -- {name}={quoted_string(value)}\n")
+
+        elif isinstance(value, list):
+            lines.append(f"{name}=(")
+            for x in value:
+                if x is not None:
+                    lines.append(f"  {quoted_string(x)}")
+
+            lines.append(")")
+
+        elif isinstance(value, dict):  # pyright: ignore[reportUnnecessaryIsInstance]
+            lines.append(f"declare -A {name}=(")
+            for k, v in value.items():
+                lines.append(f"  [{k}]={quoted_string(v)}")
+
+            lines.append(")")
+
+        else:
+            raise ValueError(f"Unsupported type {type(value)} for variable \n{name}")
+
+    return "\n".join(lines)
+
+
 class APKBUILD:
     def __init__(self, variables: bash.Variables, functions: bash.Functions) -> None:
         self.variables: bash.Variables = variables
@@ -206,7 +240,12 @@ class APKBUILD:
 
                 lines.append(")")
 
+        subpackages = self.subpackages
         for name, value in self.functions.items():
+            if name not in subpackages.values():
+                lines.append(f"{name}() {{{value}}}")
+
+        for name, value in subpackages.items():
             lines.append(f"{name}() {{{value}}}")
 
         return "\n".join(lines)
@@ -349,9 +388,23 @@ class APKBUILD:
     def source(self, value: list[str] | None) -> list[str] | None:
         return value
 
-    @string_array_property
-    def subpackages(self, value: list[str] | None) -> list[str] | None:
-        return value
+    @property
+    def subpackages(self) -> dict[str, str]:
+        value = self.variables.get("subpackages", None)
+        assert value is None or isinstance(value, str)
+        if value is None:
+            return {}
+
+        subpackages: dict[str, str] = {}
+        for spec in value.split():
+            parts = spec.split(":", 1)
+            if len(parts) == 1:
+                parts[1] = parts[0]
+
+            name, fn = parts
+            subpackages[name] = self.functions[fn]
+
+        return subpackages
 
     @string_array_property
     def triggers(self, value: list[str] | None) -> list[str] | None:
