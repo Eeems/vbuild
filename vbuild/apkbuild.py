@@ -25,15 +25,51 @@ class ErrorType(Enum):
         return str(type)[10:]
 
 
+class StringProperty(property):
+    pass
+
+
+class StringArrayProperty(property):
+    pass
+
+
 def string_property(func: Callable[..., str | None]) -> property:
     name = func.__name__
 
-    def wrapper(self: "APKBUILD") -> str | None:
+    def fget(self: "APKBUILD") -> str | None:
         value = self.variables.get(name, None)
         assert value is None or isinstance(value, str)
         return func(self, value)
 
-    return property(wrapper)
+    def fset(self: "APKBUILD", value: str | None) -> None:
+        assert value is None or isinstance(value, str)
+        self.variables[name] = value
+
+    def fdel(self: "APKBUILD") -> None:
+        del self.variables[name]
+
+    return StringProperty(fget, fset, fdel, func.__doc__)
+
+
+def string_array_property(func: Callable[..., list[str] | None]) -> property:
+    name = func.__name__
+
+    def fget(self: "APKBUILD") -> list[str] | None:
+        value = self.variables.get(name, None)
+        assert value is None or isinstance(value, str)
+        return func(self, None) if value is None else func(self, value.split())
+
+    def fset(self: "APKBUILD", value: list[str] | None):
+        assert value is None or (
+            isinstance(value, list)
+            and (not value or not [x for x in value if not isinstance(x, str)])
+        )
+        self.variables[name] = None if value is None else f"\n{'\n'.join(value)}\n"
+
+    def fdel(self: "APKBUILD") -> None:
+        del self.variables[name]
+
+    return StringArrayProperty(fget, fset, fdel, func.__doc__)
 
 
 def get_token(value: str, offset: int) -> tuple[int, str]:
@@ -128,6 +164,15 @@ class APKBUILD:
     def __init__(self, variables: bash.Variables, functions: bash.Functions) -> None:
         self.variables: bash.Variables = variables
         self.functions: bash.Functions = functions
+        for name in variables.keys():
+            prop = getattr(APKBUILD, name, None)
+            if not isinstance(prop, property) or prop.fset is None or prop.fget is None:
+                continue
+
+            if isinstance(prop, StringProperty) or isinstance(
+                prop, StringArrayProperty
+            ):
+                prop.fset(self, prop.fget(self))
 
     @property
     def text(self) -> str:
@@ -188,84 +233,84 @@ class APKBUILD:
         assert value is not None
         return value
 
-    @string_property
-    def arch(self, value: str | None) -> str | None:
+    @string_array_property
+    def arch(self, value: list[str] | None) -> list[str] | None:
         return value
 
-    @string_property
-    def depends(self, value: str | None) -> str | None:
+    @string_array_property
+    def depends(self, value: list[str] | None) -> list[str] | None:
         return value
 
-    @string_property
-    def depends_dev(self, value: str | None) -> str | None:
+    @string_array_property
+    def depends_dev(self, value: list[str] | None) -> list[str] | None:
         return value
 
-    @string_property
-    def depends_doc(self, value: str | None) -> str | None:
+    @string_array_property
+    def depends_doc(self, value: list[str] | None) -> list[str] | None:
         return value
 
-    @string_property
-    def depends_openrc(self, value: str | None) -> str | None:
+    @string_array_property
+    def depends_openrc(self, value: list[str] | None) -> list[str] | None:
         return value
 
-    @string_property
-    def depends_libs(self, value: str | None) -> str | None:
+    @string_array_property
+    def depends_libs(self, value: list[str] | None) -> list[str] | None:
         return value
 
-    @string_property
-    def depends_static(self, value: str | None) -> str | None:
+    @string_array_property
+    def depends_static(self, value: list[str] | None) -> list[str] | None:
         return value
 
-    @string_property
-    def checkdepends(self, value: str | None) -> str | None:
+    @string_array_property
+    def checkdepends(self, value: list[str] | None) -> list[str] | None:
         return value
 
     @string_property
     def giturl(self, value: str | None) -> str | None:
         return value
 
-    @string_property
-    def install(self, value: str | None) -> str | None:
+    @string_array_property
+    def install(self, value: list[str] | None) -> list[str] | None:
         return value
 
-    @string_property
-    def install_if(self, value: str | None) -> str | None:
+    @string_array_property
+    def install_if(self, value: list[str] | None) -> list[str] | None:
         return value
 
     @string_property
     def license(self, value: str | None) -> str | None:
         return value
 
-    @string_property
-    def makedepends(self, value: str | None) -> str | None:
+    @string_array_property
+    def makedepends(self, value: list[str] | None) -> list[str] | None:
         return value
 
-    @string_property
-    def makedepends_build(self, value: str | None) -> str | None:
+    @string_array_property
+    def makedepends_build(self, value: list[str] | None) -> list[str] | None:
         return value
 
-    @string_property
-    def makedepends_host(self, value: str | None) -> str | None:
+    @string_array_property
+    def makedepends_host(self, value: list[str] | None) -> list[str] | None:
         return value
 
-    @string_property
-    def sha256sums(self, value: str | None) -> str | None:
+    @string_array_property
+    def sha256sums(self, value: list[str] | None) -> list[str] | None:
         return value
 
-    @string_property
-    def sha512sums(self, value: str | None) -> str | None:
+    @string_array_property
+    def sha512sums(self, value: list[str] | None) -> list[str] | None:
         return value
 
-    @string_property
-    def options(self, value: str | None) -> str | None:
+    @string_array_property
+    def options(self, value: list[str] | None) -> list[str] | None:
         return value
 
     @string_property
     def pkgdesc(self, value: str | None) -> str | None:
         return value
 
-    @string_property
-    def pkggroups(self, value: str | None) -> str | None:
+    @string_array_property
+    def pkggroups(self, value: list[str] | None) -> list[str] | None:
         return value
 
     @string_property
@@ -276,40 +321,40 @@ class APKBUILD:
     def pkgrel(self, value: str | None) -> str | None:
         return value
 
-    @string_property
-    def pkgusers(self, value: str | None) -> str | None:
+    @string_array_property
+    def pkgusers(self, value: list[str] | None) -> list[str] | None:
         return value
 
     @string_property
     def pkgver(self, value: str | None) -> str | None:
         return value
 
-    @string_property
-    def provides(self, value: str | None) -> str | None:
+    @string_array_property
+    def provides(self, value: list[str] | None) -> list[str] | None:
         return value
 
     @string_property
     def provider_priority(self, value: str | None) -> str | None:
         return value
 
-    @string_property
-    def replaces(self, value: str | None) -> str | None:
+    @string_array_property
+    def replaces(self, value: list[str] | None) -> list[str] | None:
         return value
 
-    @string_property
-    def replaces_priority(self, value: str | None) -> str | None:
+    @string_array_property
+    def replaces_priority(self, value: list[str] | None) -> list[str] | None:
         return value
 
-    @string_property
-    def source(self, value: str | None) -> str | None:
+    @string_array_property
+    def source(self, value: list[str] | None) -> list[str] | None:
         return value
 
-    @string_property
-    def subpackages(self, value: str | None) -> str | None:
+    @string_array_property
+    def subpackages(self, value: list[str] | None) -> list[str] | None:
         return value
 
-    @string_property
-    def triggers(self, value: str | None) -> str | None:
+    @string_array_property
+    def triggers(self, value: list[str] | None) -> list[str] | None:
         return value
 
     @string_property
