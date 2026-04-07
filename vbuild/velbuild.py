@@ -1,19 +1,18 @@
-import os
 import copy
-
+import os
 from collections.abc import Generator
 from inspect import cleandoc
 from typing import override
 
 from . import bash
-
-from .apkbuild import APKBUILD
-from .apkbuild import APKBUILD_AUTOMATIC_VARIABLES
-from .apkbuild import quoted_string
-from .apkbuild import ErrorType
-from .apkbuild import string_property
-from .apkbuild import put_variables
-
+from .apkbuild import (
+    APKBUILD,
+    APKBUILD_AUTOMATIC_VARIABLES,
+    ErrorType,
+    put_variables,
+    quoted_string,
+    string_property,
+)
 
 INSTALL_FUNCTION_NAME_MAP = {
     "preinstall": "pre-install",
@@ -68,23 +67,35 @@ class VELBUILD(APKBUILD):
 
                 lines.append(")")
 
-        if self.install.strip():  # pyright: ignore[reportAny]
-            lines.append(f"install={quoted_string(self.install)}")  # pyright: ignore[reportAny]
-
         subpackages = self.subpackages
+        subpackage_map: dict[str, str] = {}
+        if subpackages:
+            value = self.variables["subpackages"]
+            assert isinstance(value, str)
+            for spec in value.split():
+                parts = spec.split(":", 1)
+                subpackage_map[parts[0]] = parts[0] if len(parts) == 1 else parts[1]
+
+        if self.install.strip():  # pyright: ignore[reportAny]
+            lines.append(f"install={quoted_string(self.install)}")  # pyright: ignore[reportAny]        subpackages = {k.replace("-", "_"): v for k, v in self.subpackages.items()}
+
+        tab = " " * 4
         for name, value in self.functions.items():
-            if name in INSTALL_FUNCTION_NAMES or name in self.subpackages.values():
+            if name in INSTALL_FUNCTION_NAMES or name in subpackage_map.values():
                 continue
 
             if name == "package" and self.postosupgrade is not None:
                 fn_name = INSTALL_FUNCTION_NAME_MAP["postosupgrade"]
-                tab = " " * 4
-                value += f'{tab}install -Dm755 "$startdir"/"$pkgname".{fn_name} "$pkgdir"/home/root/.vellum/hooks/post-os-upgrade/"$pkgname";\n'
+                value += f'{tab}install -Dm755 "$startdir"/"$pkgname".{fn_name} '  # noqa: PLW2901
+                value += (
+                    '"$pkgdir"/home/root/.vellum/hooks/post-os-upgrade/"$pkgname";\n'  # noqa: PLW2901
+                )
 
             lines.append(f"{name}() {{{value}}}")
 
-        for name, value in subpackages.items():
-            lines.append(f"{name}() {{{value}}}")
+        if subpackages:
+            for name, value in subpackages.items():
+                lines.append(f"{subpackage_map[name]}() {{{value}}}")
 
         if "sha512sums" in self.variables:
             value = self.variables["sha512sums"]
@@ -108,6 +119,19 @@ class VELBUILD(APKBUILD):
             ) as f:
                 _ = f.write(f"#!/bin/sh\n{src}")
 
+        for name, body in super().subpackages.items():
+            _, sub_funcs = bash.parse(body, APKBUILD_AUTOMATIC_VARIABLES)
+            for lifecycle_name, lifecycle_file in INSTALL_FUNCTION_NAME_MAP.items():
+                if lifecycle_name not in sub_funcs:
+                    continue
+
+                src = cleandoc(sub_funcs[lifecycle_name])
+                with open(
+                    os.path.join(path, f"{name}.{lifecycle_file}"),
+                    "w",
+                ) as f:
+                    _ = f.write(f"#!/bin/sh\n{src}")
+
     @override
     def validate(self) -> Generator[tuple[ErrorType, str]]:
         if self.upstream_author is None:  # pyright: ignore[reportAny]
@@ -128,6 +152,62 @@ class VELBUILD(APKBUILD):
 
         if self.sha256sums is not None:  # pyright: ignore[reportAny]
             yield ErrorType.Error, "sha256sums is not supported by vbuild"
+
+    @APKBUILD.subpackages.getter
+    def subpackages(self) -> dict[str, str]:
+        subpackages = super().subpackages
+        tab = " " * 4
+        for name, body in subpackages.items():
+            context = put_variables(self.variables)
+            sub_vars, _ = bash.parse(context + body, APKBUILD_AUTOMATIC_VARIABLES)
+            expected_vars, sub_funcs = bash.parse(body, APKBUILD_AUTOMATIC_VARIABLES)
+
+            sub_vars["install"] = ""
+            for lifecycle_name in INSTALL_FUNCTION_NAMES:
+                if lifecycle_name in sub_funcs and name != "postosupgrade":
+                    sub_vars["install"] += (
+                        f"\n{name}.{INSTALL_FUNCTION_NAME_MAP[lifecycle_name]}"
+                    )
+
+            if sub_vars["install"]:
+                sub_vars["install"] += "\n"
+                expected_vars["install"] = ""
+
+            subpackages[name] = ""
+            for var_name in expected_vars.keys():
+                if (
+                    var_name in bash.DEFAULT_VARIABLE_NAMES
+                    or var_name in APKBUILD_AUTOMATIC_VARIABLES
+                ):
+                    continue
+
+                var_value = sub_vars[var_name]
+                if var_value is None:
+                    continue
+
+                if isinstance(var_value, str):
+                    subpackages[name] += (
+                        f"\n{tab}{var_name}={quoted_string(var_value)};"
+                    )
+
+                elif isinstance(var_value, list):
+                    joined = " ".join(v for v in var_value if v is not None)
+                    subpackages[name] += f"\n{tab}{var_name}={quoted_string(joined)};"
+
+            if "package" in sub_funcs:
+                subpackages[name] += "\n" + sub_funcs["package"]
+
+            if "postosupgrade" in sub_funcs:
+                fn_name = INSTALL_FUNCTION_NAME_MAP["postosupgrade"]
+                subpackages[name] += (
+                    f'\n{tab}install -Dm755 "$startdir"/"$pkgname".{fn_name} '
+                )
+                subpackages[name] += (
+                    '"$pkgdir"/home/root/.vellum/hooks/post-os-upgrade/"$pkgname";\n'
+                )
+                pass
+
+        return subpackages
 
     @APKBUILD.install.getter
     def install(self) -> str:
