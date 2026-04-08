@@ -175,9 +175,9 @@ def put_variables(variables: bash.Variables) -> str:
 
         elif isinstance(value, list):
             lines.append(f"{name}=(")
-            for x in value:
+            for index, x in enumerate(value):
                 if x is not None:
-                    lines.append(f"  {quoted_string(x)}")
+                    lines.append(f"  [{index}]={quoted_string(x)}")
 
             lines.append(")")
 
@@ -241,8 +241,16 @@ class APKBUILD:
                 lines.append(")")
 
         subpackages = self.subpackages
+        subpackage_map: dict[str, str] = {}
+        if subpackages:
+            value = self.variables["subpackages"]
+            assert isinstance(value, str)
+            for spec in value.split():
+                parts = spec.split(":", 1)
+                subpackage_map[parts[0]] = parts[0] if len(parts) == 1 else parts[1]
+
         for name, value in self.functions.items():
-            if name not in subpackages.values():
+            if name not in subpackage_map.values():
                 lines.append(f"{name}() {{{value}}}")
 
         for name, value in subpackages.items():
