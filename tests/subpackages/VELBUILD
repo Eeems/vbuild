@@ -30,6 +30,10 @@ unpack() {
 	case "$CARCH" in
 	aarch64) unzip -o "$srcdir"/extensions-aarch64.zip -d "$srcdir" ;;
 	armv7) unzip -o "$srcdir"/extensions-arm32-testing.zip -d "$srcdir" ;;
+	*)
+		echo "Unable to build for $CARCH"
+		exit 1
+		;;
 	esac
 }
 
