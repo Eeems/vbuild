@@ -152,7 +152,7 @@ class VELBUILD(APKBUILD):
                     if (
                         lifecyclename != name
                         and lifecyclename in src
-                        and getattr(self, lifecyclename) is not None
+                        and lifecyclename in sub_funcs
                     ):
                         header += self._lifecycle_header_script(name, lifecyclename)
 
