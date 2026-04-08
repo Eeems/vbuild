@@ -18,7 +18,9 @@ vbuild is based off of alpine's abuild utility. It takes a VELBUILD file, transl
 
 ### VELBUILD Reference
 
-VELBUILD is a superset of [APKBUILD(5)](https://man.archlinux.org/man/APKBUILD.5.en). It uses largely the same format, but has a few key extra variables/functions. subpackage functions also expect a `package()` method instead of a function body.
+VELBUILD is a superset of [APKBUILD(5)](https://man.archlinux.org/man/APKBUILD.5.en). It uses largely the same format, but has a few key extra variables/functions.
+
+subpackage functions expect a `package()` method instead of a function body.
 
 #### category
 
@@ -30,31 +32,31 @@ The author of the upstream source of what is being packaged.
 
 #### preinstall
 
-A function containing the contents of $pkgname.pre-install. See [APKBUILD(5)](https://man.archlinux.org/man/APKBUILD.5.en#Install_Scripts) for more information.
+A function containing the contents of $pkgname.pre-install. See [APKBUILD(5)](https://man.archlinux.org/man/APKBUILD.5.en#Install_Scripts) for more information. This function can be called by the other lifecycle scripts.
 
 #### postinstall
 
-A function containing the contents of $pkgname.post-install. See [APKBUILD(5)](https://man.archlinux.org/man/APKBUILD.5.en#Install_Scripts) for more information.
+A function containing the contents of $pkgname.post-install. See [APKBUILD(5)](https://man.archlinux.org/man/APKBUILD.5.en#Install_Scripts) for more information. This function can be called by the other lifecycle scripts.
 
 #### preupgrade
 
-A function containing the contents of $pkgname.pre-upgrade. See [APKBUILD(5)](https://man.archlinux.org/man/APKBUILD.5.en#Install_Scripts) for more information.
+A function containing the contents of $pkgname.pre-upgrade. See [APKBUILD(5)](https://man.archlinux.org/man/APKBUILD.5.en#Install_Scripts) for more information. This function can be called by the other lifecycle scripts.
 
 #### postupgrade
 
-A function containing the contents of $pkgname.post-upgrade. See [APKBUILD(5)](https://man.archlinux.org/man/APKBUILD.5.en#Install_Scripts) for more information.
+A function containing the contents of $pkgname.post-upgrade. See [APKBUILD(5)](https://man.archlinux.org/man/APKBUILD.5.en#Install_Scripts) for more information. This function can be called by the other lifecycle scripts.
 
 #### predeinstall
 
-A function containing the contents of $pkgname.pre-deinstall. See [APKBUILD(5)](https://man.archlinux.org/man/APKBUILD.5.en#Install_Scripts) for more information.
+A function containing the contents of $pkgname.pre-deinstall. See [APKBUILD(5)](https://man.archlinux.org/man/APKBUILD.5.en#Install_Scripts) for more information. This function can be called by the other lifecycle scripts.
 
 #### postdeinstall
 
-A function containing the contents of $pkgname.post-install. See [APKBUILD(5)](https://man.archlinux.org/man/APKBUILD.5.en#Install_Scripts) for more information.
+A function containing the contents of $pkgname.post-install. See [APKBUILD(5)](https://man.archlinux.org/man/APKBUILD.5.en#Install_Scripts) for more information. This function can be called by the other lifecycle scripts.
 
 #### postosupgrade
 
-A function containing the contents of $pkgname.post-os-upgrade.See [vellum-dev/vellum](https://github.com/vellum-dev/vellum/?tab=readme-ov-file#package-scripts) for more information.
+A function containing the contents of $pkgname.post-os-upgrade.See [vellum-dev/vellum](https://github.com/vellum-dev/vellum/?tab=readme-ov-file#package-scripts) for more information. This function can be called by the other lifecycle scripts.
 
 ### Configuration files
 
