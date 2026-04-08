@@ -42,10 +42,12 @@ if ! grep -q "webserver-remote.post-os-upgrade" APKBUILD; then
 	exit 1
 fi
 
+# shellcheck disable=SC2140
+has_install() { grep -Fq "install -Dm755 \"\$startdir\"/${1}.post-os-upgrade \"\$pkgdir\"/home/root/.vellum/hooks/post-os-upgrade/${1};" APKBUILD; }
+
 # Check post-os-upgrade install line in subpackage function
-# shellcheck disable=SC2016
-if ! grep -Fq 'install -Dm755 "$startdir"/"$pkgname".post-os-upgrade "$pkgdir"/home/root/.vellum/hooks/post-os-upgrade/"$pkgname";' APKBUILD; then
-	echo "post-os-upgrade install line missing"
+if ! has_install webserver-remote; then
+	echo "webserver-remote.post-os-upgrade install line missing"
 	exit 1
 fi
 
