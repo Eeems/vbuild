@@ -199,12 +199,11 @@ class VELBUILD(APKBUILD):
             if "postosupgrade" in sub_funcs:
                 fn_name = INSTALL_FUNCTION_NAME_MAP["postosupgrade"]
                 subpackages[name] += (
-                    f'\n{tab}install -Dm755 "$startdir"/"$pkgname".{fn_name} '
+                    f'\n{tab}install -Dm755 "$startdir"/{name}.{fn_name} '
                 )
                 subpackages[name] += (
-                    '"$pkgdir"/home/root/.vellum/hooks/post-os-upgrade/"$pkgname";\n'
+                    f'"$pkgdir"/home/root/.vellum/hooks/post-os-upgrade/{name};\n'
                 )
-                pass
 
         return subpackages
 
