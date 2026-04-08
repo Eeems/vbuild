@@ -1,4 +1,3 @@
-import copy
 import os
 from collections.abc import Generator
 from inspect import cleandoc

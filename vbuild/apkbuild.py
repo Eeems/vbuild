@@ -1,10 +1,10 @@
-import copy
 import shlex
 import string
-
+from collections.abc import (
+    Callable,
+    Generator,
+)
 from enum import Enum
-from typing import Callable
-from collections.abc import Generator
 
 from . import bash
 
