@@ -95,7 +95,28 @@ class VELBUILD(APKBUILD):
 
         return "\n".join(lines)
 
+    def _lifecycle_header_script(self, pkgname: str, name: str) -> str:
+        tab = " " * 4
+        header = f"\n{name}() {{\n"
+        if name == "postosupgrade":
+            header += f"{tab}/home/root/.vellum/hooks/post-os-upgrade/{pkgname}"
+
+        else:
+            assert isinstance(self.pkgver, str)  # pyright: ignore[reportAny]
+            assert isinstance(self.pkgrel, str)  # pyright: ignore[reportAny]
+            lifecycle = INSTALL_FUNCTION_NAME_MAP[name]
+            header += (
+                f"{tab}db=/home/root/.vellum/lib/apk/db/scripts.tar.gz;\n"
+                + f"{tab}tar tf $db \\\n"
+                + f"{tab}| grep -E '^{pkgname}-{self.pkgver}-r{self.pkgrel}\\..+\\.{lifecycle}$' \\\n"
+                + f"{tab}| xargs tar xOf $db \\\n"
+                + f"{tab}| bash /dev/stdin"
+            )
+
+        return header + ";\n}"
+
     def save(self, path: str):
+        assert isinstance(self.pkgname, str)  # pyright: ignore[reportAny]
         with open(os.path.join(path, "APKBUILD"), "w") as f:
             _ = f.write(self.text + "\n")
 
@@ -104,11 +125,20 @@ class VELBUILD(APKBUILD):
             if src is None:
                 continue
 
+            header = "#!/bin/sh"
+            for lifecyclename in sorted(INSTALL_FUNCTION_NAMES):
+                if (
+                    lifecyclename != name
+                    and lifecyclename in src
+                    and getattr(self, lifecyclename) is not None
+                ):
+                    header += self._lifecycle_header_script(self.pkgname, lifecyclename)
+
             with open(
-                os.path.join(path, f"{self.pkgname}.{INSTALL_FUNCTION_NAME_MAP[name]}"),  # pyright: ignore[reportAny]
+                os.path.join(path, f"{self.pkgname}.{INSTALL_FUNCTION_NAME_MAP[name]}"),
                 "w",
             ) as f:
-                _ = f.write(f"#!/bin/sh\n{src}")
+                _ = f.write(f"{header}\n{src}")
 
         for name, body in super().subpackages.items():
             _, sub_funcs = bash.parse(body, APKBUILD_AUTOMATIC_VARIABLES)
@@ -117,11 +147,20 @@ class VELBUILD(APKBUILD):
                     continue
 
                 src = cleandoc(sub_funcs[lifecycle_name])
+                header = "#!/bin/sh"
+                for lifecyclename in sorted(INSTALL_FUNCTION_NAMES):
+                    if (
+                        lifecyclename != name
+                        and lifecyclename in src
+                        and getattr(self, lifecyclename) is not None
+                    ):
+                        header += self._lifecycle_header_script(name, lifecyclename)
+
                 with open(
                     os.path.join(path, f"{name}.{lifecycle_file}"),
                     "w",
                 ) as f:
-                    _ = f.write(f"#!/bin/sh\n{src}")
+                    _ = f.write(f"{header}\n{src}")
 
     @override
     def validate(self) -> Generator[tuple[ErrorType, str]]:
@@ -202,7 +241,7 @@ class VELBUILD(APKBUILD):
     @APKBUILD.install.getter
     def install(self) -> str:
         data = ""
-        for name in INSTALL_FUNCTION_NAMES:
+        for name in sorted(INSTALL_FUNCTION_NAMES):
             if name in self.functions and name != "postosupgrade":
                 data += f"\n{self.pkgname}.{INSTALL_FUNCTION_NAME_MAP[name]}"  # pyright: ignore[reportAny]
 

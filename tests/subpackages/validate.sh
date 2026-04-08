@@ -120,3 +120,8 @@ if ! head -1 webserver-remote.post-os-upgrade | grep -q "#!/bin/sh"; then
 	echo "webserver-remote.post-os-upgrade missing shebang"
 	exit 1
 fi
+
+if ! grep -Fq 'postinstall() {' webserver-remote.post-os-upgrade; then
+	echo "postinstall() method missing from webserver-remote.post-os-upgrade"
+	exit 1
+fi
