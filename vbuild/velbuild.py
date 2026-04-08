@@ -66,21 +66,14 @@ class VELBUILD(APKBUILD):
 
                 lines.append(")")
 
-        subpackages = self.subpackages
-        subpackage_map: dict[str, str] = {}
-        if subpackages:
-            value = self.variables["subpackages"]
-            assert isinstance(value, str)
-            for spec in value.split():
-                parts = spec.split(":", 1)
-                subpackage_map[parts[0]] = parts[0] if len(parts) == 1 else parts[1]
-
         if self.install.strip():  # pyright: ignore[reportAny]
             lines.append(f"install={quoted_string(self.install)}")  # pyright: ignore[reportAny]
 
         tab = " " * 4
+        subpackage_map = self._subpackages
+        subpackage_functions = subpackage_map.values()
         for name, value in self.functions.items():
-            if name in INSTALL_FUNCTION_NAMES or name in subpackage_map.values():
+            if name in INSTALL_FUNCTION_NAMES or name in subpackage_functions:
                 continue
 
             if name == "package" and self.postosupgrade is not None:
@@ -92,9 +85,8 @@ class VELBUILD(APKBUILD):
 
             lines.append(f"{name}() {{{value}}}")
 
-        if subpackages:
-            for name, value in subpackages.items():
-                lines.append(f"{subpackage_map[name]}() {{{value}}}")
+        for name, value in self.subpackages.items():
+            lines.append(f"{subpackage_map[name]}() {{{value}}}")
 
         if "sha512sums" in self.variables:
             value = self.variables["sha512sums"]

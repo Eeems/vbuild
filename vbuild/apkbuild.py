@@ -240,20 +240,12 @@ class APKBUILD:
 
                 lines.append(")")
 
-        subpackages = self.subpackages
-        subpackage_map: dict[str, str] = {}
-        if subpackages:
-            value = self.variables["subpackages"]
-            assert isinstance(value, str)
-            for spec in value.split():
-                parts = spec.split(":", 1)
-                subpackage_map[parts[0]] = parts[0] if len(parts) == 1 else parts[1]
-
+        subpackage_functions = self._subpackages.values()
         for name, value in self.functions.items():
-            if name not in subpackage_map.values():
+            if name not in subpackage_functions:
                 lines.append(f"{name}() {{{value}}}")
 
-        for name, value in subpackages.items():
+        for name, value in self.subpackages.items():
             lines.append(f"{name}() {{{value}}}")
 
         return "\n".join(lines)
@@ -397,22 +389,36 @@ class APKBUILD:
         return value
 
     @property
-    def subpackages(self) -> dict[str, str]:
+    def _subpackages(self) -> dict[str, str]:
         value = self.variables.get("subpackages", None)
-        assert value is None or isinstance(value, str)
         if value is None:
             return {}
 
-        subpackages: dict[str, str] = {}
+        assert isinstance(value, str)
+        subpackage_map: dict[str, str] = {}
         for spec in value.split():
             parts = spec.split(":", 1)
-            if len(parts) == 1:
+            if len(parts) == 2:
+                pass
+
+            elif parts[0] in (
+                f"{self.pkgname}-doc",  # pyright: ignore[reportAny]
+                f"{self.pkgname}-dev",  # pyright: ignore[reportAny]
+                f"{self.pkgname}-openrc",  # pyright: ignore[reportAny]
+                f"{self.pkgname}-static",  # pyright: ignore[reportAny]
+            ):
+                parts.append(parts[0][len(self.pkgname) + 1 :])
+
+            else:
                 parts.append(parts[0])
 
-            name, fn = parts
-            subpackages[name] = self.functions[fn]
+            subpackage_map[parts[0]] = parts[1]
 
-        return subpackages
+        return subpackage_map
+
+    @property
+    def subpackages(self) -> dict[str, str]:
+        return {k: self.functions[v] for k, v in self._subpackages.items()}
 
     @string_array_property
     def triggers(self, value: list[str] | None) -> list[str] | None:
