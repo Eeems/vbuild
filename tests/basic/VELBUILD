@@ -29,7 +29,7 @@ package() {
 	install -D -m 755 -t "$pkgdir"/home/root/.vellum/bin/ \
 		"$srcdir"/rcctl
 }
-postinstall(){
+postinstall() {
 	set -e
 	/home/root/.vellum/bin/mount-rw
 	cp /home/root/.vellum/share/entware-rc/entware-rc@.service /etc/systemd/system/
@@ -39,16 +39,16 @@ postinstall(){
 	echo ""
 	echo "You can use rcctl to manage services installed by entware"
 }
-postosupgrade(){
+postosupgrade() {
 	set -e
-	cp /home/root/.vellum/share/entware-rc/entware-rc.service /etc/systemd/system/
+	cp /home/root/.vellum/share/entware-rc/entware-rc@.service /etc/systemd/system/
 	systemctl daemon-reload
 }
-postupgrade(){
+postupgrade() {
 	set -e
-	/home/root/.vellum/share/entware-rc/entware-rc.post-install
+	postinstall
 }
-predeinstall(){
+predeinstall() {
 	set -e
 	/home/root/.vellum/bin/mount-rw
 	/home/root/.vellum/bin/rcctl list | xargs -I {} systemctl disable --now entware-rc@{}

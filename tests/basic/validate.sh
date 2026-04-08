@@ -40,3 +40,7 @@ if ! grep -Fq 'install -Dm755 "$startdir"/"$pkgname".post-os-upgrade "$pkgdir"/h
   echo "post-os-upgrade install line missing"
   exit 1
 fi
+if ! grep -Fq 'postinstall() {' entware-rc.post-upgrade; then
+  echo "postinstall() method missing from entware-rc.post-upgrade"
+  exit 1
+fi

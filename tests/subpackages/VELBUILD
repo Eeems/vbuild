@@ -134,7 +134,7 @@ webserver_remote() {
 		echo "webserver-remote installed"
 	}
 	postosupgrade() {
-		echo "webserver-remote os upgrade"
+		postinstall
 	}
 }
 
