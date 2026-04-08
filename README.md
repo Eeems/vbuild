@@ -18,7 +18,7 @@ vbuild is based off of alpine's abuild utility. It takes a VELBUILD file, transl
 
 ### VELBUILD Reference
 
-VELBUILD is a superset of [APKBUILD(5)](https://man.archlinux.org/man/APKBUILD.5.en). It uses largely the same format, but has a few key extra variables/functions.
+VELBUILD is a superset of [APKBUILD(5)](https://man.archlinux.org/man/APKBUILD.5.en). It uses largely the same format, but has a few key extra variables/functions. subpackage functions also expect a `package()` method instead of a function body.
 
 #### category
 
