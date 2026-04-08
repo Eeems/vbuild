@@ -1,11 +1,15 @@
 from __future__ import annotations
 
 import sys
+import traceback
 
 from typing import Callable
 from typing import Any
 
 from vbuild.apkbuild import quoted_string  # pyright: ignore[reportImplicitRelativeImport]
+from vbuild.apkbuild import APKBUILD  # pyright: ignore[reportImplicitRelativeImport]
+from vbuild.apkbuild import StringProperty  # pyright: ignore[reportImplicitRelativeImport]
+from vbuild.apkbuild import StringArrayProperty  # pyright: ignore[reportImplicitRelativeImport]
 
 FAILED = False
 
@@ -13,8 +17,55 @@ FAILED = False
 def _assert(source: str, debug: Callable[[], Any] | None = None):  # pyright: ignore[reportExplicitAny]
     global FAILED
     print(f"check {source}: ", end="")
-    if eval(source):
-        print("pass")
+    try:
+        if eval(source):
+            print("pass")
+            return
+
+    except Exception:
+        FAILED = True  # pyright: ignore[reportConstantRedefinition]
+        print("fail")
+        traceback.print_exc()
+        return
+
+    FAILED = True  # pyright: ignore[reportConstantRedefinition]
+    print("fail")
+    if debug is not None:
+        print(f"  {debug()}")
+
+
+def _raises(source: str, exc: type[Exception], debug: Callable[[], Any] | None = None):  # pyright: ignore[reportExplicitAny]
+    global FAILED
+    print(f"check {source} raises {exc.__name__}: ", end="")
+    try:
+        eval(source)
+        FAILED = True  # pyright: ignore[reportConstantRedefinition]
+        print("fail")
+        if debug is not None:
+            print(f"  {debug()}")
+
+    except Exception as e:
+        if isinstance(e, exc):
+            print("pass")
+            return
+
+        print("fail")
+        traceback.print_exc()
+
+
+def _isinstance(source: str, cls: type, debug: Callable[[], Any] | None = None):  # pyright: ignore[reportExplicitAny]
+    global FAILED
+    print(f"checking that {source} is {cls.__name__}: ", end="")
+    try:
+        value = eval(source)  # pyright: ignore[reportAny]
+        if isinstance(value, cls):
+            print("pass")
+            return
+
+    except Exception:
+        FAILED = True  # pyright: ignore[reportConstantRedefinition]
+        print("fail")
+        traceback.print_exc()
         return
 
     FAILED = True  # pyright: ignore[reportConstantRedefinition]
@@ -64,6 +115,23 @@ _assert('quoted_string("\'") == "\\"\\\'\\""', lambda: quoted_string("'"))
 _assert(
     "quoted_string(\"it's\") == \"'it'\\\"'\\\"'s'\"", lambda: quoted_string("it's")
 )
+_isinstance("APKBUILD.maintainer", StringProperty)
+_isinstance("APKBUILD.arch", StringArrayProperty)
+apkbuild = APKBUILD({}, {})
+_assert("not apkbuild.text.strip()")
+_raises("apkbuild.maintainer", AssertionError)
+apkbuild.maintainer = "test"
+_assert('apkbuild.maintainer == "test"')
+_assert("apkbuild.text.strip() == \"maintainer='test'\"")
+_raises('setattr(apkbuild, "maintainer", 1)', AssertionError)
+_assert("apkbuild.arch is None")
+apkbuild.arch = ["test"]
+_assert('apkbuild.arch == ["test"]')
+_raises('setattr(apkbuild, "arch", "test")', AssertionError)
+_assert("apkbuild.text.strip() == \"maintainer='test'\\narch='\\ntest\\n'\"")
+apkbuild.arch = ["test", "test2"]
+_assert('apkbuild.arch == ["test", "test2"]')
+_assert("apkbuild.text.strip() == \"maintainer='test'\\narch='\\ntest\\ntest2\\n'\"")
 
 if FAILED:
     sys.exit(1)

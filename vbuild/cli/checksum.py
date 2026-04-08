@@ -1,14 +1,12 @@
 import os
 import shlex
-
-from argparse import ArgumentParser
-from argparse import Namespace
+from argparse import ArgumentParser, Namespace
 from typing import cast
 
 from ..abuild import abuild
-from .gen import command as gen
 from ..apkbuild import parse as parse_apkbuild
 from ..velbuild import parse as parse_velbuild
+from .gen import command as gen
 
 kwds: dict[str, str] = {
     "help": "Generate checksum to be included in APKBUILD",
@@ -32,6 +30,8 @@ def command(args: Namespace) -> int:
 
     apkbuild = parse_apkbuild(apkbuild_path)
     checksums = apkbuild.sha512sums  # pyright: ignore[reportAny]
+    assert checksums is not None
+    assert isinstance(checksums, list)
     velbuild_path = os.path.join(directory, "VELBUILD")
     velbuild = parse_velbuild(velbuild_path)
     print(f">>> {velbuild.pkgname}: Updating the sha512sums in {velbuild_path}...")  # pyright: ignore[reportAny]
@@ -74,6 +74,6 @@ def command(args: Namespace) -> int:
 
     with open(velbuild_path, "w") as f:
         f.writelines(lines_out)
-        _ = f.write(f"sha512sums={shlex.quote(checksums)}")  # pyright: ignore[reportAny]
+        _ = f.write(f"sha512sums={shlex.quote('\n'.join(checksums))}")
 
     return 0

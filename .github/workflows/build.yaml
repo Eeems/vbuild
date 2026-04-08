@@ -96,7 +96,13 @@ jobs:
           if [ -f "tests/${{ matrix.path }}/action" ];then
             action="$(cat "tests/${{ matrix.path }}/action")"
           fi
-          VBUILD_DRIVER=$driver python -m vbuild -C "tests/${{ matrix.path }}" "$action"
+          CARCH=noarch
+          if [ -f "tests/${{ matrix.path }}/arch" ];then
+            CARCH="$(cat "tests/${{ matrix.path }}/arch")"
+          fi
+          CARCH=$CARCH \
+          VBUILD_DRIVER=$driver \
+          python -m vbuild -C "tests/${{ matrix.path }}" "$action"
           if [ "$driver" == 'podman' ];then
             echo "Stopping podman service..."
             kill $(jobs -p) || true
@@ -235,7 +241,13 @@ jobs:
           if [ -f "tests/${{ matrix.path }}/action" ];then
             action="$(cat "tests/${{ matrix.path }}/action")"
           fi
-          VBUILD_DRIVER=$driver dist/vbuild -C "tests/${{ matrix.path }}" "$action"
+          CARCH=noarch
+          if [ -f "tests/${{ matrix.path }}/arch" ];then
+            CARCH="$(cat "tests/${{ matrix.path }}/arch")"
+          fi
+          CARCH=$CARCH \
+          VBUILD_DRIVER=$driver \
+          dist/vbuild -C "tests/${{ matrix.path }}" "$action"
           if [ "$driver" == 'podman' ];then
             echo "Stopping podman service..."
             kill $(jobs -p) || true
