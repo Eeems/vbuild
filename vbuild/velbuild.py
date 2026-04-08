@@ -76,7 +76,7 @@ class VELBUILD(APKBUILD):
                 subpackage_map[parts[0]] = parts[0] if len(parts) == 1 else parts[1]
 
         if self.install.strip():  # pyright: ignore[reportAny]
-            lines.append(f"install={quoted_string(self.install)}")  # pyright: ignore[reportAny]        subpackages = {k.replace("-", "_"): v for k, v in self.subpackages.items()}
+            lines.append(f"install={quoted_string(self.install)}")  # pyright: ignore[reportAny]
 
         tab = " " * 4
         for name, value in self.functions.items():
@@ -163,7 +163,7 @@ class VELBUILD(APKBUILD):
 
             sub_vars["install"] = ""
             for lifecycle_name in INSTALL_FUNCTION_NAMES:
-                if lifecycle_name in sub_funcs and name != "postosupgrade":
+                if lifecycle_name in sub_funcs and lifecycle_name != "postosupgrade":
                     sub_vars["install"] += (
                         f"\n{name}.{INSTALL_FUNCTION_NAME_MAP[lifecycle_name]}"
                     )

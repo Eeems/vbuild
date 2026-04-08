@@ -399,7 +399,7 @@ class APKBUILD:
         for spec in value.split():
             parts = spec.split(":", 1)
             if len(parts) == 1:
-                parts[1] = parts[0]
+                parts.append(parts[0])
 
             name, fn = parts
             subpackages[name] = self.functions[fn]
