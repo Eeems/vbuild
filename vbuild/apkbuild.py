@@ -5,6 +5,7 @@ from collections.abc import (
     Generator,
 )
 from enum import Enum
+from typing import cast
 
 from . import bash
 
@@ -396,18 +397,17 @@ class APKBUILD:
 
         assert isinstance(value, str)
         subpackage_map: dict[str, str] = {}
+        pkgname = cast(str, self.pkgname)
         for spec in value.split():
             parts = spec.split(":", 1)
             if len(parts) == 2:
                 pass
 
-            elif parts[0] in (
-                f"{self.pkgname}-doc",  # pyright: ignore[reportAny]
-                f"{self.pkgname}-dev",  # pyright: ignore[reportAny]
-                f"{self.pkgname}-openrc",  # pyright: ignore[reportAny]
-                f"{self.pkgname}-static",  # pyright: ignore[reportAny]
+            elif (
+                parts[0].startswith(f"{pkgname}-")
+                and "-" not in parts[0][len(pkgname) + 1 :]
             ):
-                parts.append(parts[0][len(self.pkgname) + 1 :])
+                parts.append(parts[0][len(pkgname) + 1 :])
 
             else:
                 parts.append(parts[0])
