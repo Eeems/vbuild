@@ -8,6 +8,13 @@ exists xovi-extensions.post-install
 exists qt-resource-rebuilder.post-install
 exists webserver-remote.post-install
 exists webserver-remote.post-os-upgrade
+exists dist/aarch64/qt-command-executor-17.0.0-r4.apk
+exists dist/aarch64/qt-resource-rebuilder-17.0.0-r4.apk
+exists dist/aarch64/webserver-remote-17.0.0-r4.apk
+exists dist/aarch64/xovi-extensions-17.0.0-r4.apk
+exists dist/aarch64/xovi-extensions-subpackage-17.0.0-r4.apk
+exists dist/aarch64/xovi-message-broker-17.0.0-r4.apk
+exists pkg/webserver-remote/home/root/.vellum/hooks/post-os-upgrade/webserver-remote
 
 # Check install variables: expect exactly 3 (main + qt_resource_rebuilder + webserver_remote)
 install_count=$(grep -c "^    install='" APKBUILD || true)
@@ -44,11 +51,11 @@ fi
 
 # shellcheck disable=SC2140
 has_post_os_upgrade_install() {
-  grep -Fq "install -Dm755 \"\$startdir\"/${1}.post-os-upgrade \"\$pkgdir\"/home/root/.vellum/hooks/post-os-upgrade/${1};" APKBUILD
+  grep -Fq "install -Dm755 \"\$startdir\"/${1}.post-os-upgrade \"\$${2:-}pkgdir\"/home/root/.vellum/hooks/post-os-upgrade/${1};" APKBUILD
 }
 
 # Check post-os-upgrade install line in subpackage function
-if ! has_post_os_upgrade_install webserver-remote; then
+if ! has_post_os_upgrade_install webserver-remote sub; then
   echo "webserver-remote.post-os-upgrade install line missing"
   exit 1
 fi
@@ -108,7 +115,7 @@ if ! grep -q "qt-resource-rebuilder installed" qt-resource-rebuilder.post-instal
   echo "qt-resource-rebuilder.post-install has wrong content"
   exit 1
 fi
-if ! grep -q "webserver-remote installed" webserver-remote.post-install; then
+if ! grep -q "postosupgrade" webserver-remote.post-install; then
   echo "webserver-remote.post-install has wrong content"
   exit 1
 fi
@@ -136,7 +143,27 @@ if ! head -1 webserver-remote.post-os-upgrade | grep -q "#!/bin/sh"; then
 fi
 
 # Check embedded lifecycle methods exist
+if ! grep -Fq 'postosupgrade() {' webserver-remote.post-install; then
+  echo "postosupgrade() method missing from webserver-remote.post-install"
+  exit 1
+fi
+if ! tar tf dist/aarch64/webserver-remote-17.0.0-r4.apk 2>&1 | grep -q .post-install; then
+  echo ".post-install file missing from webserver-remote-17.0.0-r4.apk"
+  exit 1
+fi
+if ! tar xOf dist/aarch64/webserver-remote-17.0.0-r4.apk .post-install 2>&1 | grep -Fq 'postosupgrade() {'; then
+  echo "postosupgrade() method missing from webserver-remote.post-install in webserver-remote-17.0.0-r4.apk"
+  exit 1
+fi
 if ! grep -Fq 'postinstall() {' webserver-remote.post-os-upgrade; then
   echo "postinstall() method missing from webserver-remote.post-os-upgrade"
+  exit 1
+fi
+if ! tar tf dist/aarch64/webserver-remote-17.0.0-r4.apk 2>&1 | grep -q home/root/.vellum/hooks/post-os-upgrade/webserver-remote; then
+  echo "webserver-remote.post-os-upgrade file missing from webserver-remote-17.0.0-r4.apk"
+  exit 1
+fi
+if ! tar xOf dist/aarch64/webserver-remote-17.0.0-r4.apk home/root/.vellum/hooks/post-os-upgrade/webserver-remote 2>&1 | grep -Fq 'postinstall() {'; then
+  echo "postinstall() method missing from webserver-remote.post-os-upgrade in webserver-remote-17.0.0-r4.apk"
   exit 1
 fi
