@@ -132,7 +132,7 @@ webserver_remote() {
 	}
 
 	postinstall() {
-		echo "webserver-remote installed"
+		postosupgrade
 	}
 	postosupgrade() {
 		postinstall

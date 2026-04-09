@@ -233,7 +233,7 @@ class VELBUILD(APKBUILD):
                     f'\n{tab}install -Dm755 "$startdir"/{name}.{fn_name} '
                 )
                 subpackages[name] += (
-                    f'"$pkgdir"/home/root/.vellum/hooks/post-os-upgrade/{name};\n'
+                    f'"$subpkgdir"/home/root/.vellum/hooks/post-os-upgrade/{name};\n'
                 )
 
         return subpackages
