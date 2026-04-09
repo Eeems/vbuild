@@ -16,6 +16,7 @@ subpackages="
 	qt-command-executor:qt_command_executor
 	xovi-message-broker:message_broker
 	webserver-remote:webserver_remote
+	xovi-extensions-subpackage
 "
 
 _release="v17-14012026"
@@ -135,6 +136,12 @@ webserver_remote() {
 	}
 	postosupgrade() {
 		postinstall
+	}
+}
+subpackage() {
+	pkgdesc="Testing subpackages"
+	package() {
+		mkdir -p "$subpkgdir"
 	}
 }
 
