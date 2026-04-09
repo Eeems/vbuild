@@ -113,7 +113,7 @@ class VELBUILD(APKBUILD):
                 + f"{tab}| bash /dev/stdin"
             )
 
-        return header + ";\n}"
+        return header + ' "$@";\n}'
 
     def save(self, path: str):
         assert isinstance(self.pkgname, str)  # pyright: ignore[reportAny]
