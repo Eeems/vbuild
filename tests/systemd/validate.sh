@@ -35,11 +35,11 @@ if ! grep -Fq 'test-systemd.pre-deinstall' APKBUILD; then
 fi
 
 # Check package function copies units to /home/root/.vellum/share/
-if ! grep -Fq 'install -Dm644 "foo.service" "$pkgdir/home/root/.vellum/share/test-systemd/foo.service"' APKBUILD; then
+if ! grep -Fq 'install -Dm644 "$srcdir/foo.service" "$pkgdir/home/root/.vellum/share/test-systemd/foo.service"' APKBUILD; then
 	echo "Missing package install for foo.service"
 	exit 1
 fi
-if ! grep -Fq 'install -Dm644 "bar.socket" "$subpkgdir/home/root/.vellum/share/test-systemd-socket/bar.socket"' APKBUILD; then
+if ! grep -Fq 'install -Dm644 "$srcdir/bar.socket" "$subpkgdir/home/root/.vellum/share/test-systemd-socket/bar.socket"' APKBUILD; then
 	echo "Missing package install for bar.socket"
 	exit 1
 fi

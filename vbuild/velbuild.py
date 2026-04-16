@@ -99,7 +99,7 @@ class VELBUILD(APKBUILD):
             if name == "package":
                 for unit in self.systemdunits:  # pyright: ignore[reportAny]
                     unit_name = os.path.basename(unit)
-                    value += f'{tab}install -Dm644 "{unit}" "$pkgdir/home/root/.vellum/share/{self.pkgname}/{unit_name}";\n'
+                    value += f'{tab}install -Dm644 "$srcdir/{unit}" "$pkgdir/home/root/.vellum/share/{self.pkgname}/{unit_name}";\n'
 
             lines.append(f"{name}() {{{value}}}")
 
@@ -245,7 +245,7 @@ class VELBUILD(APKBUILD):
             ]:
                 unit_name = os.path.basename(unit)
                 subpackages[name] += (
-                    f'\n{tab}install -Dm644 "{unit}" "$subpkgdir/home/root/.vellum/share/{name}/{unit_name}";\n'
+                    f'\n{tab}install -Dm644 "$srcdir/{unit}" "$subpkgdir/home/root/.vellum/share/{name}/{unit_name}";\n'
                 )
 
         return subpackages
