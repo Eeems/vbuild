@@ -1,0 +1,43 @@
+maintainer="Test Author <test@example.com>"
+pkgname=test-systemd
+pkgver=1.0.0
+pkgrel=0
+pkgdesc="Test package with systemd units"
+upstream_author="test-author"
+category="test"
+url="https://example.com"
+arch="noarch"
+license="MIT"
+depends="mount-utils"
+subpackages='
+test-systemd-socket:socket
+test-systemd-empty:empty
+'
+systemdunits='
+foo.service
+'
+source="
+foo.service
+bar.socket
+"
+socket() {
+	systemdunits='
+	bar.socket
+	'
+}
+empty() {
+	postinstall() {
+		true
+	}
+	postupgrade() {
+		postinstall
+	}
+	package() {
+		mkdir -p "$subpkgdir"
+	}
+}
+
+sha512sums='7fcacd3d0206f0293d05db3112d81fce9f445fb29dd9e7d84b95e89aac528734f604b62369ee0bc5f0a77dea3b322cbdae3ed5f2330a6aecc9efb6efc415f8d2
+foo.service
+c266a2160591ef9d75017caf51a8cd3167276d854f810b2e2d0cde11dae06a3ceb5b493ae79b257bec5224ccd14dbb5d76340aa6ee1015c0a1312576a0606599
+bar.socket'
