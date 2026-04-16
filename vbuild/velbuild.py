@@ -89,7 +89,9 @@ class VELBUILD(APKBUILD):
             if name in INSTALL_FUNCTION_NAMES or name in subpackage_functions:
                 continue
 
-            if name == "package" and self.postosupgrade is not None:
+            if name == "package" and (
+                self.postosupgrade is not None or self.systemdunits
+            ):
                 fn_name = INSTALL_FUNCTION_NAME_MAP["postosupgrade"]
                 value += f'{tab}install -Dm755 "$startdir"/"$pkgname".{fn_name} '  # noqa: PLW2901
                 value += (
