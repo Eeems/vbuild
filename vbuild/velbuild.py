@@ -37,11 +37,8 @@ class VELBUILD(APKBUILD):
         lines: list[str] = []
         variables = self.variables.copy()
 
-        if "options" not in variables:
-            variables["options"] = ""
-
-        if self.systemdunits and "!fhs" not in self.options:
-            self.options = list([*self.options, "!fhs"])
+        if self.systemdunits and (self.options is None or "!fhs" not in self.options):
+            variables["options"] = f"\n{'\n'.join([*(self.options or []), '!fhs'])}\n"
 
         for name, value in variables.items():
             if (
