@@ -366,15 +366,9 @@ class VELBUILD(APKBUILD):
                 lines.append(f"{tab}systemctl enable --now {unit_name}")
 
             if name == "postupgrade":
-                lines.extend(
-                    [
-                        f"{tab}if systemctl is-enabled --quiet {unit_name} && systemctl is-active --quiet {unit_name}; then",
-                        f"{tab * 2}systemctl try-reload-or-restart {unit_name}",
-                        f"{tab}fi",
-                    ]
-                )
+                lines.append(f"{tab}systemctl try-reload-or-restart {unit_name}")
 
-            if name == "postosupgrade":
+            if name == "postosupgrade" and "@." not in unit_name:
                 lines.append(f"{tab}systemctl enable --now {unit_name}")
 
         if name != "postosupgrade":
