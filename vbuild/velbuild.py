@@ -195,16 +195,24 @@ class VELBUILD(APKBUILD):
             context = put_variables(self.variables)
             sub_vars, _ = bash.parse(context + body, APKBUILD_AUTOMATIC_VARIABLES)
             expected_vars, sub_funcs = bash.parse(body, APKBUILD_AUTOMATIC_VARIABLES)
-
-            sub_vars["install"] = ""
+            systemdunits = [
+                x for x in cast(str, expected_vars.get("systemdunits", "")).split() if x
+            ]
+            install: list[str] = []
             for lifecycle_name in INSTALL_FUNCTION_NAMES:
                 if lifecycle_name in sub_funcs and lifecycle_name != "postosupgrade":
-                    sub_vars["install"] += (
-                        f"\n{name}.{INSTALL_FUNCTION_NAME_MAP[lifecycle_name]}"
+                    install.append(
+                        f"{name}.{INSTALL_FUNCTION_NAME_MAP[lifecycle_name]}"
                     )
 
-            if sub_vars["install"]:
-                sub_vars["install"] += "\n"
+            if systemdunits:
+                for lifecycle_name in ("postinstall", "postupgrade", "predeinstall"):
+                    install.append(
+                        f"{self.pkgname}.{INSTALL_FUNCTION_NAME_MAP[lifecycle_name]}"  # pyright: ignore[reportAny]
+                    )
+
+            if install:
+                sub_vars["install"] = f"\n{'\n'.join(sorted(set(install)))}\n"
                 expected_vars["install"] = ""
 
             subpackages[name] = ""
@@ -231,22 +239,21 @@ class VELBUILD(APKBUILD):
             if "package" in sub_funcs:
                 subpackages[name] += "\n" + sub_funcs["package"]
 
-            if "postosupgrade" in sub_funcs:
+            if "postosupgrade" in sub_funcs or systemdunits:
                 fn_name = INSTALL_FUNCTION_NAME_MAP["postosupgrade"]
                 subpackages[name] += (
                     f'\n{tab}install -Dm755 "$startdir"/{name}.{fn_name} '
-                )
-                subpackages[name] += (
-                    f'"$subpkgdir"/home/root/.vellum/hooks/post-os-upgrade/{name};\n'
+                    + f'"$subpkgdir"/home/root/.vellum/hooks/post-os-upgrade/{name};'
                 )
 
-            for unit in [
-                x for x in cast(str, expected_vars.get("systemdunits", "")).split() if x
-            ]:
+            for unit in systemdunits:
                 unit_name = os.path.basename(unit)
                 subpackages[name] += (
-                    f'\n{tab}install -Dm644 "$srcdir/{unit}" "$subpkgdir/home/root/.vellum/share/{name}/{unit_name}";\n'
+                    f'\n{tab}install -Dm644 "$srcdir/{unit}" '
+                    + f'"$subpkgdir/home/root/.vellum/share/{name}/{unit_name}";'
                 )
+
+            subpackages[name] += "\n"
 
         return subpackages
 
