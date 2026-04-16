@@ -38,8 +38,8 @@ class VELBUILD(APKBUILD):
         if "options" not in self.variables:
             self.variables["options"] = ""
 
-        if self.systemdunits:
-            self.options = list(set([*self.options, "!fhs"]))
+        if self.systemdunits and "!fhs" not in self.options:
+            self.options = list([*self.options, "!fhs"])
 
         for name, value in self.variables.items():
             if (
