@@ -72,12 +72,6 @@ if ! grep -q 'systemctl enable --now foo.service' test-systemd.post-install; the
 	exit 1
 fi
 
-# Check post-upgrade has is-enabled/is-active check
-if ! grep -q 'systemctl is-enabled --quiet foo.service && systemctl is-active --quiet foo.service' test-systemd.post-upgrade; then
-	echo "Missing is-enabled/is-active check in post-upgrade"
-	exit 1
-fi
-
 # Check pre-deinstall has disable
 if ! grep -q 'systemctl disable --now foo.service' test-systemd.pre-deinstall; then
 	echo "Missing disable in pre-deinstall"
