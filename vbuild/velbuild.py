@@ -352,23 +352,27 @@ class VELBUILD(APKBUILD):
                 )
 
             if name == "predeinstall":
-                lines.extend(
-                    [
-                        f"{tab}systemctl disable --now {unit_name}",
-                        f"{tab}rm -f /etc/systemd/system/{unit_name}",
-                    ]
-                )
+                if "@." in unit_name:
+                    lines.append(f"{tab}systemctl disable {unit_name}")
+
+                else:
+                    lines.append(f"{tab}systemctl disable --now {unit_name}")
+
+                lines.append(f"{tab}rm -f /etc/systemd/system/{unit_name}")
 
         lines.append(f"{tab}systemctl daemon-reload")
         for unit in systemdunits:
             unit_name = os.path.basename(unit)
+            if "@." in unit_name:
+                continue
+
             if name == "postinstall":
                 lines.append(f"{tab}systemctl enable --now {unit_name}")
 
             if name == "postupgrade":
                 lines.append(f"{tab}systemctl try-reload-or-restart {unit_name}")
 
-            if name == "postosupgrade" and "@." not in unit_name:
+            if name == "postosupgrade":
                 lines.append(f"{tab}systemctl enable --now {unit_name}")
 
         if name != "postosupgrade":
