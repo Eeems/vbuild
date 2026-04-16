@@ -1,4 +1,5 @@
 import os
+import re
 from collections.abc import Generator
 from inspect import cleandoc
 from typing import (
@@ -208,7 +209,7 @@ class VELBUILD(APKBUILD):
             if systemdunits:
                 for lifecycle_name in ("postinstall", "postupgrade", "predeinstall"):
                     install.append(
-                        f"{self.pkgname}.{INSTALL_FUNCTION_NAME_MAP[lifecycle_name]}"  # pyright: ignore[reportAny]
+                        f"{name}.{INSTALL_FUNCTION_NAME_MAP[lifecycle_name]}"
                     )
 
             if install:
@@ -394,7 +395,7 @@ class VELBUILD(APKBUILD):
             header += (
                 f"{tab}db=/home/root/.vellum/lib/apk/db/scripts.tar.gz;\n"
                 + f"{tab}tar tf $db \\\n"
-                + f"{tab}| grep -E '^{pkgname}-{self.pkgver}-r{self.pkgrel}\\..+\\.{lifecycle}$' \\\n"
+                + f"{tab}| grep -E '^{re.escape(pkgname)}-{re.escape(self.pkgver)}-r{re.escape(self.pkgrel)}\\..+\\.{re.escape(lifecycle)}$' \\\n"
                 + f"{tab}| xargs tar xOf $db \\\n"
                 + f"{tab}| SKIP_SYSTEMD_HANDLING=1 bash /dev/stdin"
             )
