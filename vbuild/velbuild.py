@@ -35,14 +35,15 @@ class VELBUILD(APKBUILD):
     @APKBUILD.text.getter
     def text(self) -> str:
         lines: list[str] = []
+        variables = self.variables.copy()
 
-        if "options" not in self.variables:
-            self.variables["options"] = ""
+        if "options" not in variables:
+            variables["options"] = ""
 
         if self.systemdunits and "!fhs" not in self.options:
             self.options = list([*self.options, "!fhs"])
 
-        for name, value in self.variables.items():
+        for name, value in variables.items():
             if (
                 value is None
                 or name in bash.DEFAULT_VARIABLE_NAMES
@@ -83,10 +84,11 @@ class VELBUILD(APKBUILD):
         tab = " " * 4
         subpackage_map = self._subpackages
         subpackage_functions = subpackage_map.values()
-        if "package" not in self.functions:
-            self.functions["package"] = "\n"
+        functions = self.functions.copy()
+        if "package" not in functions:
+            functions["package"] = "\n"
 
-        for name, value in self.functions.items():
+        for name, value in functions.items():
             if name in INSTALL_FUNCTION_NAMES or name in subpackage_functions:
                 continue
 
@@ -107,8 +109,8 @@ class VELBUILD(APKBUILD):
         for name, value in self.subpackages.items():
             lines.append(f"{subpackage_map[name]}() {{{value}}}")
 
-        if "sha512sums" in self.variables:
-            value = self.variables["sha512sums"]
+        if "sha512sums" in variables:
+            value = variables["sha512sums"]
             assert isinstance(value, str)
             lines.append(f"sha512sums={quoted_string(value)}")
 
