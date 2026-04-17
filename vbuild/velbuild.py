@@ -54,6 +54,9 @@ class VELBUILD(APKBUILD):
             ):
                 continue
 
+            if name == "systemdunits":
+                continue
+
             if name in ("upstream_author", "category"):
                 name = f"_{name}"
 
