@@ -379,7 +379,7 @@ class VELBUILD(APKBUILD):
             lines.append(f"{tab}/home/root/.vellum/bin/mount-restore")
 
         lines.append("fi")
-        return "\n".join([*lines])
+        return "\n".join(lines)
 
     def _lifecycle_header_script(self, pkgname: str, name: str) -> str:
         tab = " " * 4
