@@ -1,0 +1,8 @@
+[Unit]
+Description=Bar Socket
+
+[Socket]
+ListenStream=/run/bar.sock
+
+[Install]
+WantedBy=sockets.target

@@ -61,7 +61,7 @@ def string_array_property(func: Callable[..., list[str] | None]) -> property:
         assert value is None or isinstance(value, str)
         return func(self, None) if value is None else func(self, value.split())
 
-    def fset(self: "APKBUILD", value: list[str] | None):
+    def fset(self: "APKBUILD", value: list[str] | None) -> None:
         assert value is None or (
             isinstance(value, list)
             and (not value or not [x for x in value if not isinstance(x, str)])

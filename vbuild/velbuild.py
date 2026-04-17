@@ -1,7 +1,11 @@
 import os
+import re
 from collections.abc import Generator
 from inspect import cleandoc
-from typing import override
+from typing import (
+    cast,
+    override,
+)
 
 from . import bash
 from .apkbuild import (
@@ -10,6 +14,7 @@ from .apkbuild import (
     ErrorType,
     put_variables,
     quoted_string,
+    string_array_property,
     string_property,
 )
 
@@ -30,8 +35,12 @@ class VELBUILD(APKBUILD):
     @APKBUILD.text.getter
     def text(self) -> str:
         lines: list[str] = []
+        variables = self.variables.copy()
 
-        for name, value in self.variables.items():
+        if self.systemdunits and (self.options is None or "!fhs" not in self.options):
+            variables["options"] = f"\n{'\n'.join([*(self.options or []), '!fhs'])}\n"
+
+        for name, value in variables.items():
             if (
                 value is None
                 or name in bash.DEFAULT_VARIABLE_NAMES
@@ -72,48 +81,39 @@ class VELBUILD(APKBUILD):
         tab = " " * 4
         subpackage_map = self._subpackages
         subpackage_functions = subpackage_map.values()
-        for name, value in self.functions.items():
+        functions = self.functions.copy()
+        if "package" not in functions:
+            functions["package"] = "\n"
+
+        for name, value in functions.items():
             if name in INSTALL_FUNCTION_NAMES or name in subpackage_functions:
                 continue
 
-            if name == "package" and self.postosupgrade is not None:
+            if name == "package" and (
+                self.postosupgrade is not None or self.systemdunits
+            ):
                 fn_name = INSTALL_FUNCTION_NAME_MAP["postosupgrade"]
                 value += f'{tab}install -Dm755 "$startdir"/"$pkgname".{fn_name} '  # noqa: PLW2901
                 value += (
                     '"$pkgdir"/home/root/.vellum/hooks/post-os-upgrade/"$pkgname";\n'  # noqa: PLW2901
                 )
 
+            if name == "package":
+                for unit in self.systemdunits:  # pyright: ignore[reportAny]
+                    unit_name = os.path.basename(unit)
+                    value += f'{tab}install -Dm644 "$srcdir/{unit}" "$pkgdir/home/root/.vellum/share/{self.pkgname}/{unit_name}";\n'
+
             lines.append(f"{name}() {{{value}}}")
 
         for name, value in self.subpackages.items():
             lines.append(f"{subpackage_map[name]}() {{{value}}}")
 
-        if "sha512sums" in self.variables:
-            value = self.variables["sha512sums"]
+        if "sha512sums" in variables:
+            value = variables["sha512sums"]
             assert isinstance(value, str)
             lines.append(f"sha512sums={quoted_string(value)}")
 
         return "\n".join(lines)
-
-    def _lifecycle_header_script(self, pkgname: str, name: str) -> str:
-        tab = " " * 4
-        header = f"\n{name}() {{\n"
-        if name == "postosupgrade":
-            header += f"{tab}/home/root/.vellum/hooks/post-os-upgrade/{pkgname}"
-
-        else:
-            assert isinstance(self.pkgver, str)  # pyright: ignore[reportAny]
-            assert isinstance(self.pkgrel, str)  # pyright: ignore[reportAny]
-            lifecycle = INSTALL_FUNCTION_NAME_MAP[name]
-            header += (
-                f"{tab}db=/home/root/.vellum/lib/apk/db/scripts.tar.gz;\n"
-                + f"{tab}tar tf $db \\\n"
-                + f"{tab}| grep -E '^{pkgname}-{self.pkgver}-r{self.pkgrel}\\..+\\.{lifecycle}$' \\\n"
-                + f"{tab}| xargs tar xOf $db \\\n"
-                + f"{tab}| bash /dev/stdin"
-            )
-
-        return header + ' "$@";\n}'
 
     def save(self, path: str):
         assert isinstance(self.pkgname, str)  # pyright: ignore[reportAny]
@@ -122,14 +122,16 @@ class VELBUILD(APKBUILD):
 
         for name, _ in INSTALL_FUNCTION_NAME_MAP.items():
             src = getattr(self, name)  # pyright: ignore[reportAny]
-            if src is None:
+
+            footer = self._getfooter(self.pkgname, name, self.systemdunits)
+            if src is None and footer is None:
                 continue
 
             header = "#!/bin/sh"
             for lifecyclename in sorted(INSTALL_FUNCTION_NAMES):
                 if (
                     lifecyclename != name
-                    and lifecyclename in src
+                    and lifecyclename in (src or "")
                     and getattr(self, lifecyclename) is not None
                 ):
                     header += self._lifecycle_header_script(self.pkgname, lifecyclename)
@@ -138,19 +140,23 @@ class VELBUILD(APKBUILD):
                 os.path.join(path, f"{self.pkgname}.{INSTALL_FUNCTION_NAME_MAP[name]}"),
                 "w",
             ) as f:
-                _ = f.write(f"{header}\n{src}")
+                _ = f.write("\n".join([header, src or "", footer or ""]))
 
         for name, body in super().subpackages.items():
-            _, sub_funcs = bash.parse(body, APKBUILD_AUTOMATIC_VARIABLES)
+            sub_vars, sub_funcs = bash.parse(body, APKBUILD_AUTOMATIC_VARIABLES)
+            systemdunits = [
+                x for x in cast(str, sub_vars.get("systemdunits", "")).split() if x
+            ]
             for lifecycle_name, lifecycle_file in INSTALL_FUNCTION_NAME_MAP.items():
-                if lifecycle_name not in sub_funcs:
+                footer = self._getfooter(name, lifecycle_name, systemdunits)
+                if lifecycle_name not in sub_funcs and footer is None:
                     continue
 
-                src = cleandoc(sub_funcs[lifecycle_name])
+                src = cleandoc(sub_funcs.get(lifecycle_name, "")) or ""
                 header = "#!/bin/sh"
                 for lifecyclename in sorted(INSTALL_FUNCTION_NAMES):
                     if (
-                        lifecyclename != name
+                        lifecyclename != lifecycle_name
                         and lifecyclename in src
                         and lifecyclename in sub_funcs
                     ):
@@ -160,7 +166,7 @@ class VELBUILD(APKBUILD):
                     os.path.join(path, f"{name}.{lifecycle_file}"),
                     "w",
                 ) as f:
-                    _ = f.write(f"{header}\n{src}")
+                    _ = f.write("\n".join([header, src, footer or ""]))
 
     @override
     def validate(self) -> Generator[tuple[ErrorType, str]]:
@@ -191,16 +197,24 @@ class VELBUILD(APKBUILD):
             context = put_variables(self.variables)
             sub_vars, _ = bash.parse(context + body, APKBUILD_AUTOMATIC_VARIABLES)
             expected_vars, sub_funcs = bash.parse(body, APKBUILD_AUTOMATIC_VARIABLES)
-
-            sub_vars["install"] = ""
+            systemdunits = [
+                x for x in cast(str, expected_vars.get("systemdunits", "")).split() if x
+            ]
+            install: list[str] = []
             for lifecycle_name in INSTALL_FUNCTION_NAMES:
                 if lifecycle_name in sub_funcs and lifecycle_name != "postosupgrade":
-                    sub_vars["install"] += (
-                        f"\n{name}.{INSTALL_FUNCTION_NAME_MAP[lifecycle_name]}"
+                    install.append(
+                        f"{name}.{INSTALL_FUNCTION_NAME_MAP[lifecycle_name]}"
                     )
 
-            if sub_vars["install"]:
-                sub_vars["install"] += "\n"
+            if systemdunits:
+                for lifecycle_name in ("postinstall", "postupgrade", "predeinstall"):
+                    install.append(
+                        f"{name}.{INSTALL_FUNCTION_NAME_MAP[lifecycle_name]}"
+                    )
+
+            if install:
+                sub_vars["install"] = f"\n{'\n'.join(sorted(set(install)))}\n"
                 expected_vars["install"] = ""
 
             subpackages[name] = ""
@@ -227,32 +241,36 @@ class VELBUILD(APKBUILD):
             if "package" in sub_funcs:
                 subpackages[name] += "\n" + sub_funcs["package"]
 
-            if "postosupgrade" in sub_funcs:
+            if "postosupgrade" in sub_funcs or systemdunits:
                 fn_name = INSTALL_FUNCTION_NAME_MAP["postosupgrade"]
                 subpackages[name] += (
                     f'\n{tab}install -Dm755 "$startdir"/{name}.{fn_name} '
+                    + f'"$subpkgdir"/home/root/.vellum/hooks/post-os-upgrade/{name};'
                 )
+
+            for unit in systemdunits:
+                unit_name = os.path.basename(unit)
                 subpackages[name] += (
-                    f'"$subpkgdir"/home/root/.vellum/hooks/post-os-upgrade/{name};\n'
+                    f'\n{tab}install -Dm644 "$srcdir/{unit}" '
+                    + f'"$subpkgdir/home/root/.vellum/share/{name}/{unit_name}";'
                 )
+
+            subpackages[name] += "\n"
 
         return subpackages
 
     @APKBUILD.install.getter
     def install(self) -> str:
-        data = ""
-        for name in sorted(INSTALL_FUNCTION_NAMES):
+        data: list[str] = []
+        for name in INSTALL_FUNCTION_NAMES:
             if name in self.functions and name != "postosupgrade":
-                data += f"\n{self.pkgname}.{INSTALL_FUNCTION_NAME_MAP[name]}"  # pyright: ignore[reportAny]
+                data.append(f"{self.pkgname}.{INSTALL_FUNCTION_NAME_MAP[name]}")  # pyright: ignore[reportAny]
 
-        return data + "\n"
+        if self.systemdunits:  # pyright: ignore[reportAny]
+            for name in ("postinstall", "postupgrade", "predeinstall"):
+                data.append(f"{self.pkgname}.{INSTALL_FUNCTION_NAME_MAP[name]}")  # pyright: ignore[reportAny]
 
-    def _getsrc(self, name: str) -> str | None:
-        src = self.functions.get(name, None)
-        if src is None:
-            return None
-
-        return cleandoc(src)
+        return f"\n{'\n'.join(sorted(set(data)))}\n"
 
     @property
     def preinstall(self) -> str | None:
@@ -289,6 +307,99 @@ class VELBUILD(APKBUILD):
     @string_property
     def upstream_author(self, value: str | None) -> str | None:
         return value
+
+    @string_array_property
+    def systemdunits(self, value: list[str] | None) -> list[str]:
+        return value or []
+
+    def _getsrc(self, name: str) -> str | None:
+        src = self.functions.get(name, None)
+        if src is None:
+            return None
+
+        return cleandoc(src)
+
+    def _getfooter(
+        self,
+        pkgname: str,
+        name: str,
+        systemdunits: list[str],
+    ) -> str | None:
+        if (
+            name
+            not in (
+                "postinstall",
+                "postupgrade",
+                "postosupgrade",
+                "predeinstall",
+            )
+            or not systemdunits
+        ):
+            return None
+
+        tab = " " * 4
+        lines = [
+            'if [ "$SKIP_SYSTEMD_HANDLING" != "1" ]; then',
+        ]
+        if name != "postosupgrade":
+            lines.append(f"{tab}/home/root/.vellum/bin/mount-rw")
+
+        for unit in systemdunits:
+            unit_name = os.path.basename(unit)
+            if name in ("postinstall", "postupgrade", "postosupgrade"):
+                lines.append(
+                    f"{tab}cp /home/root/.vellum/share/{pkgname}/{unit} /etc/systemd/system/"
+                )
+
+            if name == "predeinstall":
+                if "@." in unit_name:
+                    lines.append(f"{tab}systemctl disable {unit_name}")
+
+                else:
+                    lines.append(f"{tab}systemctl disable --now {unit_name}")
+
+                lines.append(f"{tab}rm -f /etc/systemd/system/{unit_name}")
+
+        lines.append(f"{tab}systemctl daemon-reload")
+        for unit in systemdunits:
+            unit_name = os.path.basename(unit)
+            if "@." in unit_name:
+                continue
+
+            if name == "postinstall":
+                lines.append(f"{tab}systemctl enable --now {unit_name}")
+
+            if name == "postupgrade":
+                lines.append(f"{tab}systemctl try-reload-or-restart {unit_name}")
+
+            if name == "postosupgrade":
+                lines.append(f"{tab}systemctl enable --now {unit_name}")
+
+        if name != "postosupgrade":
+            lines.append(f"{tab}/home/root/.vellum/bin/mount-restore")
+
+        lines.append("fi")
+        return "\n".join(lines)
+
+    def _lifecycle_header_script(self, pkgname: str, name: str) -> str:
+        tab = " " * 4
+        header = f"\n{name}() {{\n"
+        if name == "postosupgrade":
+            header += f"{tab}SKIP_SYSTEMD_HANDLING=1 /home/root/.vellum/hooks/post-os-upgrade/{pkgname}"
+
+        else:
+            assert isinstance(self.pkgver, str)  # pyright: ignore[reportAny]
+            assert isinstance(self.pkgrel, str)  # pyright: ignore[reportAny]
+            lifecycle = INSTALL_FUNCTION_NAME_MAP[name]
+            header += (
+                f"{tab}db=/home/root/.vellum/lib/apk/db/scripts.tar.gz;\n"
+                + f"{tab}tar tf $db \\\n"
+                + f"{tab}| grep -E '^{re.escape(pkgname)}-{re.escape(self.pkgver)}-r{re.escape(self.pkgrel)}\\..+\\.{re.escape(lifecycle)}$' \\\n"
+                + f"{tab}| xargs tar xOf $db \\\n"
+                + f"{tab}| SKIP_SYSTEMD_HANDLING=1 bash /dev/stdin"
+            )
+
+        return header + ' "$@";\n}'
 
 
 def parse(path: str) -> VELBUILD:
