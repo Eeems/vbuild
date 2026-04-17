@@ -1,13 +1,13 @@
 import os
-import sys
 import shlex
+import subprocess
+import sys
+from collections.abc import Generator, Iterator
+from hashlib import sha256
+from typing import Any
+
 import docker
 import podman
-import subprocess
-
-from collections.abc import Generator
-from collections.abc import Iterator
-from typing import Any
 
 from . import containers
 
@@ -31,7 +31,10 @@ def abuild(
     action: str = "all",
 ) -> int:
     directory = os.path.abspath(directory)
-    distfiles = os.path.expanduser("~/.cache/vbuild/distfiles")
+    distfiles = os.path.join(
+        os.path.expanduser("~/.cache/vbuild/distfiles"),
+        sha256(directory.encode()).hexdigest(),
+    )
     os.makedirs(distfiles, exist_ok=True)
     filepath = os.path.join(directory, "APKBUILD")
     if not os.path.exists(filepath):
