@@ -39,7 +39,7 @@ if ! grep -Fq 'install -Dm644 "$srcdir/foo.service" "$pkgdir/home/root/.vellum/s
 	echo "Missing package install for foo.service"
 	exit 1
 fi
-if ! grep -Fq 'install -Dm644 "$srcdir/bar.socket" "$subpkgdir/home/root/.vellum/share/test-systemd-socket/bar.socket"' APKBUILD; then
+if ! grep -Fq 'install -Dm644 "$srcdir/test/bar.socket" "$subpkgdir/home/root/.vellum/share/test-systemd-socket/bar.socket"' APKBUILD; then
 	echo "Missing package install for bar.socket"
 	exit 1
 fi

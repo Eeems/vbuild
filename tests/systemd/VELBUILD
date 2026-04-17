@@ -22,8 +22,13 @@ bar.socket
 "
 socket() {
 	systemdunits='
-	bar.socket
+	test/bar.socket
 	'
+	package() {
+		cd "$srcdir"
+		mkdir -p test
+		mv bar.socket test/
+	}
 }
 empty() {
 	postinstall() {

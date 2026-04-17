@@ -351,7 +351,7 @@ class VELBUILD(APKBUILD):
             unit_name = os.path.basename(unit)
             if name in ("postinstall", "postupgrade", "postosupgrade"):
                 lines.append(
-                    f"{tab}cp /home/root/.vellum/share/{pkgname}/{unit} /etc/systemd/system/"
+                    f"{tab}cp /home/root/.vellum/share/{pkgname}/{unit_name} /etc/systemd/system/"
                 )
 
             if name == "predeinstall":
