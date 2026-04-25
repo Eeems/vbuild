@@ -28,14 +28,12 @@ release: build
 dist:
 	mkdir -p dist
 
-${VENV_BIN_ACTIVATE}: requirements.txt
-	emake requirements
-
-vbuild/cli/__names__.py: ${VENV_BIN_ACTIVATE} $(OBJ)
+vbuild/cli/__names__.py: $(OBJ)
 	. ${VENV_BIN_ACTIVATE}; \
 	python -u write_cli_names.py
 
-dist/vbuild: dist vbuild/cli/__names__.py ${VENV_BIN_ACTIVATE} $(OBJ)
+dist/vbuild: dist vbuild/cli/__names__.py $(OBJ)
+	emake requirements
 	. ${VENV_BIN_ACTIVATE}; \
 	python -m pip install wheel nuitka zstandard; \
 	NUITKA_CACHE_DIR="$(realpath .)/.nuitka" \
@@ -48,7 +46,8 @@ dist/vbuild: dist vbuild/cli/__names__.py ${VENV_BIN_ACTIVATE} $(OBJ)
 
 executable: dist/vbuild
 
-test: ${VENV_BIN_ACTIVATE} $(IMAGES) $(OBJ)
+test: $(IMAGES) $(OBJ)
+	emake requirements
 	. ${VENV_BIN_ACTIVATE}; \
 	python -u test.py
 
