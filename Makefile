@@ -29,13 +29,7 @@ dist:
 	mkdir -p dist
 
 ${VENV_BIN_ACTIVATE}: requirements.txt
-	@echo "Setting up development virtual env in .venv"
-	python -m venv .venv
-	. ${VENV_BIN_ACTIVATE}; \
-	python -m pip install wheel build ruff; \
-	python -m pip install \
-	    --extra-index-url=https://wheels.eeems.codes/ \
-	    -r requirements.txt
+	emake requirements
 
 vbuild/cli/__names__.py: ${VENV_BIN_ACTIVATE} $(OBJ)
 	. ${VENV_BIN_ACTIVATE}; \
@@ -59,22 +53,6 @@ test: ${VENV_BIN_ACTIVATE} $(IMAGES) $(OBJ)
 	python -u test.py
 
 all: release
-
-lint: $(VENV_BIN_ACTIVATE)
-	. $(VENV_BIN_ACTIVATE); \
-	python -m ruff check
-
-lint-fix: $(VENV_BIN_ACTIVATE)
-	. $(VENV_BIN_ACTIVATE); \
-	python -m ruff check --fix
-
-format: $(VENV_BIN_ACTIVATE)
-	. $(VENV_BIN_ACTIVATE); \
-	python -m ruff format --diff
-
-format-fix: $(VENV_BIN_ACTIVATE)
-	. $(VENV_BIN_ACTIVATE); \
-	python -m ruff format
 
 builder:
 	podman build \

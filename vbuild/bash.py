@@ -3,7 +3,6 @@
 import os
 import shlex
 import subprocess
-
 from io import StringIO
 from typing import cast
 
@@ -132,7 +131,13 @@ class BashSyntaxError(Exception):
 def run_bash(src: str, env: dict[str, str] | None = None) -> str:
     env = {} if env is None else env.copy()
     env["PATH"] = os.environ["PATH"]
-    process = subprocess.run(["bash"], input=src.encode(), capture_output=True, env=env)
+    process = subprocess.run(
+        ["bash"],
+        input=src.encode(),
+        capture_output=True,
+        env=env,
+        check=False,
+    )
     errors = process.stderr.decode()
     if process.returncode == 2 or "syntax error" in errors:
         raise BashSyntaxError(errors, src, 0)
@@ -168,19 +173,19 @@ def parse(src: str, env: dict[str, str] | None = None) -> tuple[Variables, Funct
         next_token = lexer.get_token()
         assert next_token is not None
 
-        if token == "declare" and next_token[0] == "-":
+        if token == "declare" and next_token[0] == "-":  # noqa: S105
             lexer.push_token(next_token)
             name, value = parse_variable(lexer)
             variables[name] = value
             continue
 
-        if next_token != "(":
+        if next_token != "(":  # noqa: S105
             raise BashSyntaxError(
                 f"Unexpected token: '{next_token}'. Expecting '('", src, lexer.lineno
             )
 
         following_token = lexer.get_token()
-        if following_token != ")":
+        if following_token != ")":  # noqa: S105
             raise BashSyntaxError(
                 f"Unexpected token: '{next_token}'. Expecting ')'", src, lexer.lineno
             )
@@ -217,7 +222,7 @@ def parse_function(lexer: shlex.shlex) -> tuple[int, int]:
 
 def get_string(lexer: shlex.shlex) -> str:
     string_token = lexer.get_token() or ""
-    if string_token == "$":
+    if string_token == "$":  # noqa: S105
         quoted_string = lexer.get_token() or ""
         string_token = run_bash("echo -n $" + shlex.quote(quoted_string))
 
@@ -227,13 +232,13 @@ def get_string(lexer: shlex.shlex) -> str:
 def parse_variable(lexer: shlex.shlex) -> tuple[str, VariableValue]:
     flags_token = lexer.get_token()
     assert flags_token is not None
-    flags: set[str] = set(flags_token[1:]) if flags_token != "--" else set()
+    flags: set[str] = set(flags_token[1:]) if flags_token != "--" else set()  # noqa: S105
     name = lexer.get_token()
     assert name is not None
     value: VariableValue = None
     next_token = lexer.get_token()
     assert next_token is not None
-    if next_token != "=":
+    if next_token != "=":  # noqa: S105
         lexer.push_token(next_token)
         return name, value
 
@@ -259,10 +264,10 @@ def parse_indexed(lexer: shlex.shlex) -> IndexedArray:
     while True:
         token = lexer.get_token()
         assert token != lexer.eof
-        if token == ")":
+        if token == ")":  # noqa: S105
             break
 
-        assert token == "["
+        assert token == "["  # noqa: S105
         index = int(lexer.get_token() or "")
         _ = assert_token(lexer, "]")
         _ = assert_token(lexer, "=")
@@ -281,10 +286,10 @@ def parse_associative(lexer: shlex.shlex) -> AssociativeArray:
     while True:
         token = lexer.get_token()
         assert token != lexer.eof
-        if token == ")":
+        if token == ")":  # noqa: S105
             break
 
-        assert token == "["
+        assert token == "["  # noqa: S105
         key = lexer.get_token()
         assert key is not None
         _ = assert_token(lexer, "]")

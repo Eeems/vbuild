@@ -37,7 +37,7 @@ class VELBUILD(APKBUILD):
         lines: list[str] = []
         variables = self.variables.copy()
 
-        if self.systemdunits and (self.options is None or "!fhs" not in self.options):
+        if self.systemdunits and (self.options is None or "!fhs" not in self.options):  # pyright: ignore[reportAny]
             variables["options"] = f"\n{'\n'.join([*(self.options or []), '!fhs'])}\n"
 
         for name, value in variables.items():
@@ -58,7 +58,7 @@ class VELBUILD(APKBUILD):
                 continue
 
             if name in ("upstream_author", "category"):
-                name = f"_{name}"
+                name = f"_{name}"  # noqa: PLW2901
 
             if isinstance(value, str):
                 lines.append(f"{name}={quoted_string(value)}")
@@ -93,18 +93,18 @@ class VELBUILD(APKBUILD):
                 continue
 
             if name == "package" and (
-                self.postosupgrade is not None or self.systemdunits
+                self.postosupgrade is not None or self.systemdunits  # pyright: ignore[reportAny]
             ):
                 fn_name = INSTALL_FUNCTION_NAME_MAP["postosupgrade"]
                 value += f'{tab}install -Dm755 "$startdir"/"$pkgname".{fn_name} '  # noqa: PLW2901
-                value += (
+                value += (  # noqa: PLW2901
                     '"$pkgdir"/home/root/.vellum/hooks/post-os-upgrade/"$pkgname";\n'  # noqa: PLW2901
                 )
 
             if name == "package":
                 for unit in self.systemdunits:  # pyright: ignore[reportAny]
-                    unit_name = os.path.basename(unit)
-                    value += f'{tab}install -Dm644 "$srcdir/{unit}" "$pkgdir/home/root/.vellum/share/{self.pkgname}/{unit_name}";\n'
+                    unit_name = os.path.basename(unit)  # pyright: ignore[reportAny]
+                    value += f'{tab}install -Dm644 "$srcdir/{unit}" "$pkgdir/home/root/.vellum/share/{self.pkgname}/{unit_name}";\n'  # noqa: PLW2901  # pyright: ignore[reportAny]
 
             lines.append(f"{name}() {{{value}}}")
 
@@ -118,7 +118,7 @@ class VELBUILD(APKBUILD):
 
         return "\n".join(lines)
 
-    def save(self, path: str):
+    def save(self, path: str) -> None:
         assert isinstance(self.pkgname, str)  # pyright: ignore[reportAny]
         with open(os.path.join(path, "APKBUILD"), "w") as f:
             _ = f.write(self.text + "\n")
@@ -126,7 +126,7 @@ class VELBUILD(APKBUILD):
         for name, _ in INSTALL_FUNCTION_NAME_MAP.items():
             src = getattr(self, name)  # pyright: ignore[reportAny]
 
-            footer = self._getfooter(self.pkgname, name, self.systemdunits)
+            footer = self._getfooter(self.pkgname, name, self.systemdunits)  # pyright: ignore[reportAny]
             if src is None and footer is None:
                 continue
 
@@ -406,7 +406,7 @@ class VELBUILD(APKBUILD):
 
 
 def parse(path: str) -> VELBUILD:
-    with open(path, "r") as f:
+    with open(path) as f:
         variables, functions = bash.parse(f.read(), APKBUILD_AUTOMATIC_VARIABLES)
 
     return VELBUILD(variables, functions)

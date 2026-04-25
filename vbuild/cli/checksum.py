@@ -1,6 +1,9 @@
 import os
 import shlex
-from argparse import ArgumentParser, Namespace
+from argparse import (
+    ArgumentParser,
+    Namespace,
+)
 from typing import cast
 
 from ..abuild import abuild
@@ -13,7 +16,7 @@ kwds: dict[str, str] = {
 }
 
 
-def register(_: ArgumentParser):
+def register(_: ArgumentParser) -> None:
     pass
 
 
@@ -32,13 +35,15 @@ def command(args: Namespace) -> int:
     checksums = apkbuild.sha512sums  # pyright: ignore[reportAny]
     assert checksums is not None
     assert isinstance(checksums, list)
+    assert all([isinstance(x, str) for x in checksums])  # pyright: ignore[reportUnknownVariableType]
+    checksums = cast(list[str], checksums)
     velbuild_path = os.path.join(directory, "VELBUILD")
     velbuild = parse_velbuild(velbuild_path)
     print(f">>> {velbuild.pkgname}: Updating the sha512sums in {velbuild_path}...")  # pyright: ignore[reportAny]
     if velbuild.sha512sums == checksums:  # pyright: ignore[reportAny]
         return 0
 
-    with open(velbuild_path, "r") as f:
+    with open(velbuild_path) as f:
         lines_in = f.readlines()
 
     in_block = False
