@@ -194,7 +194,7 @@ jobs:
           path: ${{ github.workspace }}/.nuitka
           key: ${{ github.job }}-ccache-alpine
       - name: Install emake
-        run: pip install emake
+        run: pip install --break-system-packages emake
         shell: alpine.sh {0}
       - name: Build with nuitka
         shell: alpine.sh {0}

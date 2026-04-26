@@ -24,7 +24,13 @@ keywords = [
     "packaging",
     "distribution",
 ]
-dynamic = ["dependencies", "readme"]
+dynamic = ["readme"]
+dependencies = [
+    "pyelftools==0.32",
+    "docker==7.1.0",
+    "podman==5.7.0",
+    "rich-argparse==1.7.2",
+]
 
 [project.urls]
 "Homepage" = "https://github.com/Eeems/vbuild"
@@ -43,7 +49,6 @@ packages = ["vbuild"]
 vbuild = ["py.typed", "*.py.typed"]
 
 [tool.setuptools.dynamic]
-dependencies = {file = ["requirements.txt"]}
 readme = {file= ["README.md"], content-type = "text/markdown"}
 
 [build-system]
