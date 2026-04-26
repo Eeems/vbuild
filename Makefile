@@ -11,7 +11,6 @@ PYTHON := python
 endif
 
 OBJ := $(wildcard ${PACKAGE}/**)
-OBJ += requirements.txt
 OBJ += pyproject.toml
 OBJ += README.md
 
