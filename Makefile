@@ -15,14 +15,17 @@ OBJ += requirements.txt
 OBJ += pyproject.toml
 OBJ += README.md
 
+.PHONY: clean
 clean:
 	if [ -d .venv/mnt ] && mountpoint -q .venv/mnt; then \
 	    umount -ql .venv/mnt; \
 	fi
 	git clean --force -dX
 
+.PHONY: build
 build: executable
 
+.PHONY: release
 release: build
 
 dist:
@@ -45,29 +48,20 @@ dist/vbuild: dist vbuild/cli/__names__.py $(OBJ)
 	    --output-filename=vbuild \
 	    vbuild
 
+.PHONY: executable
 executable: dist/vbuild
 
+.PHONY: test
 test: $(IMAGES) $(OBJ)
 	emake requirements
 	. ${VENV_BIN_ACTIVATE}; \
 	python -u test.py
 
+.PHONY: all
 all: release
 
+.PHONY: builder
 builder:
 	podman build \
 	  --tag=ghcr.io/eeems/vbuild-builder \
 	  builder/
-
-.PHONY: \
-	all \
-	build \
-	clean \
-	executable \
-	release \
-	test \
-	lint \
-	lint-fix \
-	format \
-	format-fix \
-	builder
