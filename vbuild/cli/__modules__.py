@@ -1,3 +1,4 @@
+# pyright: reportUnnecessaryTypeIgnoreComment=false
 import argparse
 import importlib
 import os
@@ -19,7 +20,7 @@ if "__compiled__" in globals():
 
     assert isinstance(names, list)
     assert all([isinstance(x, str) for x in names])  # pyright: ignore[reportUnknownVariableType]
-    names = cast(list[str], names)
+    names = cast(list[str], names)  # pyright: ignore[reportUnnecessaryCast]
 
 else:
     __dirname__ = os.path.dirname(__file__)
