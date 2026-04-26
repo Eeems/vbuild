@@ -29,6 +29,7 @@ dist:
 	mkdir -p dist
 
 vbuild/cli/__names__.py: $(OBJ)
+	emake requirements
 	. ${VENV_BIN_ACTIVATE}; \
 	python -u write_cli_names.py
 
