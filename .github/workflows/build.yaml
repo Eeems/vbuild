@@ -167,12 +167,18 @@ jobs:
       - *install-emake
       - name: Building executable
         run: |
+          make vbuild/cli/__names__.py
           emake build \
             --executable \
             --arch ${{ matrix.arch }} \
             --libc ${{ matrix.libc }} \
             --python ${{ matrix.python }} \
             ${{ matrix.nocompress && '--no-compress' || '' }}
+      - name: Rename executable
+        run: |
+          set -e
+          cd dist
+          mv vbuild-${{ matrix.arch }}-*-${{ matrix.libc }} vbuild
       - uses: actions/upload-artifact@v6
         with:
           name: vbuild-${{ matrix.arch }}-${{ matrix.libc }}
@@ -188,11 +194,13 @@ jobs:
     strategy:
       matrix:
         path: ${{ fromJson(needs.test_matrix.outputs.paths) }}
-        driver:
-          - podman
-          - docker
-        os:
-          - ubuntu
+        python:
+          - "3.14"
+        arch:
+          - x86_64
+        libc:
+          - glibc
+          - musl
       fail-fast: false
     steps:
       - name: Checkout the Git repository
@@ -201,10 +209,9 @@ jobs:
         id: download
         uses: actions/download-artifact@v8
         with:
-          name: vbuild-${{ matrix.os }}
+          name: vbuild-${{ matrix.arch }}-${{ matrix.libc }}
           path: dist
       - name: Run vbuild
-        if: matrix.os != 'alpine'
         shell: bash
         run: |
           set -e
@@ -212,37 +219,48 @@ jobs:
             echo "SKIPPED"
             exit 0
           fi
+          image="python:${{ matrix.python }}"
+          if [[ "${{ matrix.libc }}" == "musl" ]];then
+            image="${image}-alpine"
+          fi
           if [ "$driver" == 'podman' ];then
             echo "Starting podman service..."
-            sudo mkdir -p /run/user/"$(id -u)"/podman
-            socketdir=/run/user/"$(id -u)"/podman
-            sudo chown "$(id -u):$(id -g)" "$socketdir"
-            podman system service --time 0 unix://"$socketdir/podman.sock" &
+            sudo mkdir -p /run/podman
+            podman system service --time 0 unix:///run/podman/podman.sock &
             tries=0
-            while [ ! -S "$socketdir/podman.sock" ] && [ $tries -lt 60 ];do
+            while [ ! -S "/run/podman/podman.sock" ] && [ $tries -lt 60 ];do
               tries=$(( tries + 1 ))
               sleep 0.1
             done
           fi
-          echo "Running vbuild..."
-          chmod +x dist/vbuild
-          action=all
-          if [ -f "tests/${{ matrix.path }}/action" ];then
-            action="$(cat "tests/${{ matrix.path }}/action")"
-          fi
-          CARCH=noarch
-          if [ -f "tests/${{ matrix.path }}/arch" ];then
-            CARCH="$(cat "tests/${{ matrix.path }}/arch")"
-          fi
-          CARCH=$CARCH \
-          VBUILD_DRIVER=$driver \
-          dist/vbuild -C "tests/${{ matrix.path }}" "$action"
+          docker run \
+            --rm \
+            --volume=$(pwd):/src \
+            --volume=/run/docker.sock:/run/docker.sock \
+            --volume=/run/podman:/run/podman \
+            "$image" \
+            sh -ec "$script"
           if [ "$driver" == 'podman' ];then
             echo "Stopping podman service..."
             kill $(jobs -p) || true
           fi
         env:
           driver: ${{ matrix.driver }}
+          script: |
+            cd /src
+            echo "Running vbuild..."
+            chmod +x dist/vbuild
+            action=all
+            if [ -f "tests/${{ matrix.path }}/action" ];then
+              action="$(cat "tests/${{ matrix.path }}/action")"
+            fi
+            CARCH=noarch
+            if [ -f "tests/${{ matrix.path }}/arch" ];then
+              CARCH="$(cat "tests/${{ matrix.path }}/arch")"
+            fi
+            CARCH=$CARCH \
+            VBUILD_DRIVER=$driver \
+            dist/vbuild -C "tests/${{ matrix.path }}" "$action"
       - name: Validate output
         if: "!cancelled()"
         shell: bash

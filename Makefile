@@ -35,18 +35,6 @@ vbuild/cli/__names__.py: $(OBJ)
 	. ${VENV_BIN_ACTIVATE}; \
 	python -u write_cli_names.py
 
-dist/vbuild: dist vbuild/cli/__names__.py $(OBJ)
-	emake requirements
-	. ${VENV_BIN_ACTIVATE}; \
-	python -m pip install wheel nuitka zstandard; \
-	NUITKA_CACHE_DIR="$(realpath .)/.nuitka" \
-	nuitka \
-	    --assume-yes-for-downloads \
-	    --remove-output \
-	    --output-dir=dist \
-	    --output-filename=vbuild \
-	    vbuild
-
 .PHONY: executable
 executable: dist/vbuild
 
