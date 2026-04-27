@@ -248,6 +248,9 @@ jobs:
           driver: ${{ matrix.driver }}
           script: |
             cd /src
+            if [[ "${{ matrix.libc }}" == "musl" ]];then
+              apk add --no-cache bash openssl
+            fi
             echo "Running vbuild..."
             chmod +x dist/vbuild
             action=all
