@@ -279,9 +279,25 @@ jobs:
             echo "SKIPPED"
             exit 0
           fi
-          if [ -f tests/${{ matrix.path }}/validate.sh ];then
-            tests/${{ matrix.path }}/validate.sh
+          image="python:${{ matrix.python }}"
+          if [[ "${{ matrix.libc }}" == "musl" ]];then
+            image="${image}-alpine"
           fi
+          docker run \
+            --rm \
+            --volume=$(pwd):$(pwd) \
+            --env=srcdir=$(pwd) \
+            "$image" \
+            sh -ec "$script"
+        env:
+          script: |
+            cd $srcdir
+            if [[ "${{matrix.libc }}" == "musl" ]];then
+              apk add --no-cache bash
+            fi
+            if [ -f tests/${{ matrix.path }}/validate.sh ];then
+              tests/${{ matrix.path }}/validate.sh
+            fi
 
   release:
     name: Add ${{ matrix.artifact }} to release
