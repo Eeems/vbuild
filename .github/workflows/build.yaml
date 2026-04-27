@@ -233,11 +233,14 @@ jobs:
               sleep 0.1
             done
           fi
+          sudo mkdir -p /root/.config/vbuild
           docker run \
             --rm \
-            --volume=$(pwd):/src \
+            --volume=$(pwd):$(pwd) \
             --volume=/run/docker.sock:/run/docker.sock \
             --volume=/run/podman:/run/podman \
+            --volume=/root/.config/vbuild:/root/.config/vbuild \
+            --environment=srcdir=$(pwd) \
             "$image" \
             sh -ec "$script"
           if [ "$driver" == 'podman' ];then
@@ -247,9 +250,12 @@ jobs:
         env:
           driver: ${{ matrix.driver }}
           script: |
-            cd /src
+            cd $srcdir
             if [[ "${{ matrix.libc }}" == "musl" ]];then
-              apk add --no-cache bash openssl
+              apk add --no-cache \
+                bash \
+                openssl \
+                ${{ matrix.driver }}
             fi
             echo "Running vbuild..."
             chmod +x dist/vbuild
