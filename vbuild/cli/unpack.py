@@ -1,5 +1,7 @@
-from argparse import ArgumentParser
-from argparse import Namespace
+from argparse import (
+    ArgumentParser,
+    Namespace,
+)
 from typing import cast
 
 from ..abuild import abuild
@@ -9,7 +11,7 @@ kwds: dict[str, str] = {
 }
 
 
-def register(_: ArgumentParser):
+def register(_: ArgumentParser) -> None:
     pass
 
 

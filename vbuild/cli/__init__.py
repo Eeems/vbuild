@@ -1,31 +1,32 @@
 import argparse
-
-from typing import cast
 from subprocess import CalledProcessError
-from rich_argparse import RichHelpFormatter
-from rich.markdown import Markdown
+from typing import cast
 
-from .__modules__ import modules
-from .__modules__ import commands
-from .__modules__ import CommandCallable
+from rich.markdown import Markdown
+from rich_argparse import RichHelpFormatter
+
+from .__modules__ import (
+    CommandCallable,
+    commands,
+    modules,
+)
 
 
 def main() -> int:
     try:
         parser = argparse.ArgumentParser(
-            epilog=Markdown(
+            epilog=Markdown(  # pyright: ignore[reportArgumentType]
                 """
-ENVIRONMENT VARIBLES:
----------------------
+### ENVIRONMENT VARIABLES:
 
-  | Name | Description |
-  | ---- | ---------- |
-  | `$REPODEST` | Packages shall be stored in `$REPODEST/$repo/$arch/$pkgname-$pkgver-r$pkgrel.apk`, where `$repo` is the base name of the parent directory of `$startdir`. |
-  | `$CARCH` | Architecture to compile package as. |
-  | `$VBUILD_KEY_NAME` | Key name to use when signing packages. |
-  | `$VBUILD_DRIVER` | Driver to use for running containers. Possible values are `podman` and `docker`. |
-            """,
-                style="argeparse.txt",
+| Name | Description |
+| ---- | ---------- |
+| `$REPODEST` | Packages shall be stored in `$REPODEST/$repo/$arch/$pkgname-$pkgver-r$pkgrel.apk`, where `$repo` is the base name of the parent directory of `$startdir`. |
+| `$CARCH` | Architecture to compile package as. |
+| `$VBUILD_KEY_NAME` | Key name to use when signing packages. |
+| `$VBUILD_DRIVER` | Driver to use for running containers. Possible values are `podman` and `docker`. |
+                    """,
+                style="argparse.txt",
             ),
             formatter_class=RichHelpFormatter,
         )
@@ -58,3 +59,6 @@ ENVIRONMENT VARIBLES:
             print(e.stderr)  # pyright: ignore[reportAny]
 
         raise
+
+
+__all__ = ["commands", "main"]

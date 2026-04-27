@@ -1,7 +1,8 @@
 import os
-
-from argparse import ArgumentParser
-from argparse import Namespace
+from argparse import (
+    ArgumentParser,
+    Namespace,
+)
 from typing import cast
 
 from ..apkbuild import ErrorType
@@ -12,7 +13,7 @@ kwds: dict[str, str] = {
 }
 
 
-def register(_: ArgumentParser):
+def register(_: ArgumentParser) -> None:
     pass
 
 

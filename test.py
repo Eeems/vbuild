@@ -2,23 +2,24 @@ from __future__ import annotations
 
 import sys
 import traceback
-
-from typing import Callable
+from collections.abc import Callable
 from typing import Any
 
-from vbuild.apkbuild import quoted_string  # pyright: ignore[reportImplicitRelativeImport]
-from vbuild.apkbuild import APKBUILD  # pyright: ignore[reportImplicitRelativeImport]
-from vbuild.apkbuild import StringProperty  # pyright: ignore[reportImplicitRelativeImport]
-from vbuild.apkbuild import StringArrayProperty  # pyright: ignore[reportImplicitRelativeImport]
+from vbuild.apkbuild import (
+    APKBUILD,
+    StringArrayProperty,
+    StringProperty,
+    quoted_string,
+)
 
 FAILED = False
 
 
-def _assert(source: str, debug: Callable[[], Any] | None = None):  # pyright: ignore[reportExplicitAny]
+def _assert(source: str, debug: Callable[[], Any] | None = None) -> None:  # pyright: ignore[reportExplicitAny]
     global FAILED
     print(f"check {source}: ", end="")
     try:
-        if eval(source):
+        if eval(source):  # noqa: S307
             print("pass")
             return
 
@@ -34,11 +35,15 @@ def _assert(source: str, debug: Callable[[], Any] | None = None):  # pyright: ig
         print(f"  {debug()}")
 
 
-def _raises(source: str, exc: type[Exception], debug: Callable[[], Any] | None = None):  # pyright: ignore[reportExplicitAny]
+def _raises(
+    source: str,
+    exc: type[Exception],
+    debug: Callable[[], Any] | None = None,  # pyright: ignore[reportExplicitAny]
+) -> None:
     global FAILED
     print(f"check {source} raises {exc.__name__}: ", end="")
     try:
-        eval(source)
+        eval(source)  # noqa: S307
         FAILED = True  # pyright: ignore[reportConstantRedefinition]
         print("fail")
         if debug is not None:
@@ -53,11 +58,11 @@ def _raises(source: str, exc: type[Exception], debug: Callable[[], Any] | None =
         traceback.print_exc()
 
 
-def _isinstance(source: str, cls: type, debug: Callable[[], Any] | None = None):  # pyright: ignore[reportExplicitAny]
+def _isinstance(source: str, cls: type, debug: Callable[[], Any] | None = None) -> None:  # pyright: ignore[reportExplicitAny]
     global FAILED
     print(f"checking that {source} is {cls.__name__}: ", end="")
     try:
-        value = eval(source)  # pyright: ignore[reportAny]
+        value = eval(source)  # pyright: ignore[reportAny]  # noqa: S307
         if isinstance(value, cls):
             print("pass")
             return
