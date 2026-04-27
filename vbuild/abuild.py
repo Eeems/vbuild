@@ -17,7 +17,6 @@ from . import containers
 KEY_NAME = os.environ.get("VBUILD_KEY_NAME", "vbuild")
 
 SETUP_CONTAINER = [
-    "set -e",
     f"cp /root/.abuild/{KEY_NAME}.rsa.pub /etc/apk/keys/",
     'mkdir -p /dist/"$CARCH" /work/src',
 ]
@@ -119,7 +118,7 @@ def abuild(
             "ghcr.io/eeems/vbuild-builder:main",
             [
                 "sh",
-                "-c",
+                "-ec",
                 "\n".join(
                     [
                         *SETUP_CONTAINER,

@@ -240,7 +240,7 @@ jobs:
             --volume=/run/docker.sock:/run/docker.sock \
             --volume=/run/podman:/run/podman \
             --volume=/root/.config/vbuild:/root/.config/vbuild \
-            --environment=srcdir=$(pwd) \
+            --env=srcdir=$(pwd) \
             "$image" \
             sh -ec "$script"
           if [ "$driver" == 'podman' ];then
