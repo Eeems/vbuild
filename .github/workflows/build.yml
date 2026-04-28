@@ -6,9 +6,31 @@ on:
   pull_request:
   workflow_dispatch:
   release:
-    types: [released]
+    types: [ released ]
 permissions: read-all
 jobs:
+  lint:
+    name: Lint codebase
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python: &python-versions
+          - "3.12"
+          - "3.13"
+          - "3.14"
+    steps:
+      - name: Checkout the Git repository
+        uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
+        with:
+          python-version: ${{ matrix.python }}
+          cache: pip
+      - &install-emake
+        name: Install emake
+        run: pip install emake
+      - name: Run lint
+        run: emake lint
+
   test_matrix:
     name: Build test matrix
     runs-on: ubuntu-latest
@@ -38,9 +60,7 @@ jobs:
     runs-on: ubuntu-22.04
     strategy:
       matrix:
-        python:
-          - "3.12"
-          - "3.13"
+        python: *python-versions
       fail-fast: false
     steps:
       - name: Checkout the Git repository
@@ -49,6 +69,7 @@ jobs:
         with:
           python-version: ${{ matrix.python }}
           cache: "pip"
+      - *install-emake
       - name: Run tests
         run: make test
 
@@ -68,8 +89,9 @@ jobs:
         uses: actions/checkout@v6
       - uses: actions/setup-python@v6
         with:
-          python-version: 3.13
+          python-version: 3.14
           cache: "pip"
+      - *install-emake
       - name: Run vbuild
         run: |
           set -e
@@ -90,7 +112,7 @@ jobs:
             done
           fi
           echo "Running vbuild..."
-          make .venv/bin/activate
+          emake requirements
           source .venv/bin/activate
           action=all
           if [ -f "tests/${{ matrix.path }}/action" ];then
@@ -122,71 +144,45 @@ jobs:
             tests/${{ matrix.path }}/validate.sh
           fi
 
-  build-executable-ubuntu:
-    name: Build executable for ubuntu
+  build-executable:
+    name: Build executable
     needs:
       - unit_test
       - test_python
+      - lint
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python:
+          - "3.14"
+        arch:
+          - x86_64
+        libc:
+          - glibc
+          - musl
     steps:
       - name: Checkout the Git repository
         uses: actions/checkout@v6
-      - uses: actions/setup-python@v6
-        with:
-          python-version: 3.13
-          cache: "pip"
-      - name: Install ccache
-        uses: Eeems-Org/apt-cache-action@v1.5
-        with:
-          packages: ccache
-      - name: Nuitka ccache
-        uses: actions/cache@v5
-        with:
-          path: ${{ github.workspace }}/.nuitka
-          key: ${{ github.job }}-ccache-ubuntu-latest
-      - name: Build with nuitka
-        run: make executable
+      - *install-emake
+      - name: Building executable
+        run: |
+          make vbuild/cli/__names__.py
+          emake build \
+            --executable \
+            --arch ${{ matrix.arch }} \
+            --libc ${{ matrix.libc }} \
+            --python ${{ matrix.python }} \
+            ${{ matrix.nocompress && '--no-compress' || '' }}
+      - name: Rename executable
+        run: |
+          set -e
+          cd dist
+          mv vbuild-${{ matrix.arch }}-*-${{ matrix.libc }} vbuild
       - uses: actions/upload-artifact@v6
         with:
-          name: vbuild-ubuntu
-          path: dist
-          if-no-files-found: error
-
-  build-executable-alpine:
-    name: Build executable for alpine
-    needs:
-      - unit_test
-      - test_python
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout the Git repository
-        uses: actions/checkout@v6
-      - uses: jirutka/setup-alpine@v1
-        with:
-          branch: v3.23
-          packages: >
-            build-base
-            python3
-            python3-dev
-            py3-pip
-            py3-wheel
-            ccache
-            git
-            patchelf
-            upx
-            bash
-      - name: Nuitka ccache
-        uses: actions/cache@v5
-        with:
-          path: ${{ github.workspace }}/.nuitka
-          key: ${{ github.job }}-ccache-alpine
-      - name: Build with nuitka
-        shell: alpine.sh {0}
-        run: make executable
-      - uses: actions/upload-artifact@v6
-        with:
-          name: vbuild-alpine
-          path: dist
+          name: executable-${{ matrix.arch }}-${{ matrix.libc }}
+          path: dist/*
           if-no-files-found: error
 
   test_executable:
@@ -194,16 +190,20 @@ jobs:
     runs-on: ubuntu-latest
     needs:
       - test_matrix
-      - build-executable-ubuntu
-      - build-executable-alpine
+      - build-executable
     strategy:
       matrix:
         path: ${{ fromJson(needs.test_matrix.outputs.paths) }}
+        python:
+          - "3.14"
+        arch:
+          - x86_64
+        libc:
+          - glibc
+          - musl
         driver:
           - podman
           - docker
-        os:
-          - ubuntu
       fail-fast: false
     steps:
       - name: Checkout the Git repository
@@ -212,10 +212,9 @@ jobs:
         id: download
         uses: actions/download-artifact@v8
         with:
-          name: vbuild-${{ matrix.os }}
+          name: executable-${{ matrix.arch }}-${{ matrix.libc }}
           path: dist
       - name: Run vbuild
-        if: matrix.os != 'alpine'
         shell: bash
         run: |
           set -e
@@ -223,37 +222,57 @@ jobs:
             echo "SKIPPED"
             exit 0
           fi
+          image="python:${{ matrix.python }}"
+          if [[ "${{ matrix.libc }}" == "musl" ]];then
+            image="${image}-alpine"
+          fi
           if [ "$driver" == 'podman' ];then
             echo "Starting podman service..."
-            sudo mkdir -p /run/user/"$(id -u)"/podman
-            socketdir=/run/user/"$(id -u)"/podman
-            sudo chown "$(id -u):$(id -g)" "$socketdir"
-            podman system service --time 0 unix://"$socketdir/podman.sock" &
+            sudo mkdir -p /run/podman
+            podman system service --time 0 unix:///run/podman/podman.sock &
             tries=0
-            while [ ! -S "$socketdir/podman.sock" ] && [ $tries -lt 60 ];do
+            while [ ! -S "/run/podman/podman.sock" ] && [ $tries -lt 60 ];do
               tries=$(( tries + 1 ))
               sleep 0.1
             done
           fi
-          echo "Running vbuild..."
-          chmod +x dist/vbuild
-          action=all
-          if [ -f "tests/${{ matrix.path }}/action" ];then
-            action="$(cat "tests/${{ matrix.path }}/action")"
-          fi
-          CARCH=noarch
-          if [ -f "tests/${{ matrix.path }}/arch" ];then
-            CARCH="$(cat "tests/${{ matrix.path }}/arch")"
-          fi
-          CARCH=$CARCH \
-          VBUILD_DRIVER=$driver \
-          dist/vbuild -C "tests/${{ matrix.path }}" "$action"
+          sudo mkdir -p /root/.config/vbuild
+          docker run \
+            --rm \
+            --volume=$(pwd):$(pwd) \
+            --volume=/run/docker.sock:/run/docker.sock \
+            --volume=/run/podman:/run/podman \
+            --volume=/root/.config/vbuild:/root/.config/vbuild \
+            --env=srcdir=$(pwd) \
+            "$image" \
+            sh -ec "$script"
           if [ "$driver" == 'podman' ];then
             echo "Stopping podman service..."
             kill $(jobs -p) || true
           fi
         env:
           driver: ${{ matrix.driver }}
+          script: |
+            cd $srcdir
+            if [[ "${{ matrix.libc }}" == "musl" ]];then
+              apk add --no-cache \
+                bash \
+                openssl \
+                ${{ matrix.driver }}
+            fi
+            echo "Running vbuild..."
+            chmod +x dist/vbuild
+            action=all
+            if [ -f "tests/${{ matrix.path }}/action" ];then
+              action="$(cat "tests/${{ matrix.path }}/action")"
+            fi
+            CARCH=noarch
+            if [ -f "tests/${{ matrix.path }}/arch" ];then
+              CARCH="$(cat "tests/${{ matrix.path }}/arch")"
+            fi
+            CARCH=$CARCH \
+            VBUILD_DRIVER=$driver \
+            dist/vbuild -C "tests/${{ matrix.path }}" "$action"
       - name: Validate output
         if: "!cancelled()"
         shell: bash
@@ -263,44 +282,47 @@ jobs:
             echo "SKIPPED"
             exit 0
           fi
-          if [ -f tests/${{ matrix.path }}/validate.sh ];then
-            tests/${{ matrix.path }}/validate.sh
+          image="python:${{ matrix.python }}"
+          if [[ "${{ matrix.libc }}" == "musl" ]];then
+            image="${image}-alpine"
           fi
+          docker run \
+            --rm \
+            --volume=$(pwd):$(pwd) \
+            --env=srcdir=$(pwd) \
+            "$image" \
+            sh -ec "$script"
+        env:
+          script: |
+            cd $srcdir
+            if [[ "${{ matrix.libc }}" == "musl" ]];then
+              apk add --no-cache bash
+            fi
+            if [ -f tests/${{ matrix.path }}/validate.sh ];then
+              tests/${{ matrix.path }}/validate.sh
+            fi
 
   release:
-    name: Add ${{ matrix.artifact }} to release
+    name: Add release artifacts
     if: github.repository == 'Eeems/vbuild' && github.event_name == 'release' && startsWith(github.ref, 'refs/tags')
-    needs: test_executable
+    needs:
+      - test_executable
+      - build-executable
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        artifact:
-          - "vbuild-ubuntu"
-          - "vbuild-alpine"
     permissions:
       contents: write
     steps:
       - name: Checkout the Git repository
         uses: actions/checkout@v6
-      - name: Download executable
+      - name: Download executables
         id: download
         uses: actions/download-artifact@v8
         with:
-          name: ${{ matrix.artifact }}
+          pattern: executable-*
+          merge-multiple: true
           path: dist
       - name: Upload to release
-        run: |
-          if [ -f vbuild ]; then
-            name="vbuild-${{ matrix.artifact }}"
-            mv vbuild "$name"
-            gh release upload "$TAG" "$name" --clobber
-          elif [ -f vbuild-portable ]; then
-            name="vbuild-${{ matrix.artifact }}"
-            mv vbuild-portable "$name"
-            gh release upload "$TAG" "$name" --clobber
-          else
-            find . -type f | xargs -rI {} gh release upload "$TAG" {} --clobber
-          fi
+        run: find . -type f | xargs -rI {} gh release upload "$TAG" {} --clobber
         env:
           GH_TOKEN: ${{ github.token }}
           TAG: ${{ github.event.release.tag_name }}

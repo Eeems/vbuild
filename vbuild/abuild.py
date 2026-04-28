@@ -2,7 +2,10 @@ import os
 import shlex
 import subprocess
 import sys
-from collections.abc import Generator, Iterator
+from collections.abc import (
+    Generator,
+    Iterator,
+)
 from hashlib import sha256
 from typing import Any
 
@@ -14,7 +17,6 @@ from . import containers
 KEY_NAME = os.environ.get("VBUILD_KEY_NAME", "vbuild")
 
 SETUP_CONTAINER = [
-    "set -e",
     f"cp /root/.abuild/{KEY_NAME}.rsa.pub /etc/apk/keys/",
     'mkdir -p /dist/"$CARCH" /work/src',
 ]
@@ -53,7 +55,7 @@ def abuild(
     conf_path = os.path.join(abuilddir, "abuild.conf")
     lines: list[str] = [f"PACKAGER_PRIVKEY=/root/.abuild/{KEY_NAME}.rsa\n"]
     if os.path.exists(conf_path):
-        with open(conf_path, "r") as f:
+        with open(conf_path) as f:
             for line in f.readlines():
                 if not line.startswith("PACKAGER_PRIVKEY="):
                     lines.append(line)
@@ -77,9 +79,9 @@ def abuild(
             logs = containers.pull(client, "ghcr.io/eeems/vbuild-builder", "main")
             for x in logs:
                 if isinstance(x, bytes):
-                    x = x.decode()
+                    x = x.decode()  # noqa: PLW2901
 
-                x = x.strip()
+                x = x.strip()  # noqa: PLW2901
                 if x:
                     print(x, file=sys.stderr)
 
@@ -116,7 +118,7 @@ def abuild(
             "ghcr.io/eeems/vbuild-builder:main",
             [
                 "sh",
-                "-c",
+                "-ec",
                 "\n".join(
                     [
                         *SETUP_CONTAINER,
@@ -133,10 +135,10 @@ def abuild(
             logs = container.logs(stream=True)  # pyright: ignore[reportUnknownMemberType]
             for x in logs:
                 if isinstance(x, bytes):
-                    x = x.decode()
+                    x = x.decode()  # noqa: PLW2901
 
                 assert isinstance(x, str)
-                x = x.strip()
+                x = x.strip()  # noqa: PLW2901
                 if x:
                     print(x, file=sys.stderr)
 
@@ -152,7 +154,7 @@ def abuild(
                 try:
                     container.stop()  # pyright: ignore[reportUnknownMemberType]
 
-                except Exception:
+                except Exception:  # noqa: S110
                     pass
 
             container.remove()  # pyright: ignore[reportUnknownMemberType]

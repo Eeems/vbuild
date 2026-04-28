@@ -1,19 +1,22 @@
 import os
-
-from argparse import ArgumentParser
-from argparse import Namespace
+from argparse import (
+    ArgumentParser,
+    Namespace,
+)
 from typing import cast
 
 from ..abuild import abuild
-from ..apkbuild import parse
-from ..apkbuild import ErrorType
+from ..apkbuild import (
+    ErrorType,
+    parse,
+)
 
 kwds: dict[str, str] = {
     "help": "check the APKBUILD file for violations of policy, superfluous statements, stylistic violations and others",
 }
 
 
-def register(_: ArgumentParser):
+def register(_: ArgumentParser) -> None:
     pass
 
 

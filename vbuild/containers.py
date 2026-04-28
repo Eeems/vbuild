@@ -1,12 +1,11 @@
-import podman
-import docker
 import json
 import os
-
-from contextlib import contextmanager
 from collections.abc import Generator
-from typing import cast
-from typing import Any
+from contextlib import contextmanager
+from typing import Any, cast
+
+import docker
+import podman
 
 
 def parse_progress(x: dict[str, Any]) -> str:  # pyright: ignore[reportExplicitAny]
@@ -38,8 +37,8 @@ def pull(
     assert isinstance(logs, Generator), f"Not a generator: {logs}"
     for x in logs:  # pyright: ignore[reportUnknownVariableType]
         yield parse_progress(
-            json.loads(x) if isinstance(client, podman.PodmanClient) else x
-        )  # pyright: ignore[reportArgumentType, reportUnknownArgumentType]
+            json.loads(x) if isinstance(client, podman.PodmanClient) else x  # pyright: ignore[reportArgumentType, reportUnknownArgumentType]
+        )
 
 
 @contextmanager

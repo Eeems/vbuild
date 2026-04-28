@@ -1,8 +1,9 @@
-import os
+# pyright: reportUnnecessaryTypeIgnoreComment=false
 import argparse
 import importlib
+import os
+from collections.abc import Callable
 from glob import glob
-from typing import Callable
 from types import ModuleType
 
 CommandCallable = Callable[[argparse.Namespace], int]
@@ -11,7 +12,15 @@ commands: dict[str, CommandCallable] = {}
 
 names: list[str] = []
 if "__compiled__" in globals():
-    from .__names__ import names
+    from typing import cast
+
+    from .__names__ import (  # pyright: ignore[reportMissingImports]
+        names,  # pyright: ignore[ reportUnknownVariableType]
+    )
+
+    assert isinstance(names, list)
+    assert all([isinstance(x, str) for x in names])  # pyright: ignore[reportUnknownVariableType]
+    names = cast(list[str], names)  # pyright: ignore[reportUnnecessaryCast]
 
 else:
     __dirname__ = os.path.dirname(__file__)

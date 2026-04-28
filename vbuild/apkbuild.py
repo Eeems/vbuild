@@ -115,8 +115,8 @@ def quoted_string(value: str) -> str:
         token = value[offset]
         offset += 1
 
-        if token != "$":
-            if token != "'":
+        if token != "$":  # noqa: S105
+            if token != "'":  # noqa: S105
                 if not in_quote:
                     in_quote = True
                     quoted_value += "'"
@@ -140,7 +140,7 @@ def quoted_string(value: str) -> str:
             source += name
             offset, next_token = get_token(value, offset)
             source += next_token
-            if next_token != "}" and offset < size:
+            if next_token != "}" and offset < size:  # noqa: S105
                 raise bash.BashSyntaxError(
                     f"Unexpected token: '{next_token}'. Expecting '}}'", value, 1
                 )
@@ -498,7 +498,7 @@ class APKBUILD:
 
 
 def parse(path: str) -> APKBUILD:
-    with open(path, "r") as f:
+    with open(path) as f:
         variables, functions = bash.parse(f.read())
 
     return APKBUILD(variables, functions)
