@@ -98,6 +98,7 @@ def abuild(
                 "CARCH": os.environ.get("CARCH", "noarch"),
                 "SOURCE_DATE_EPOCH": os.environ.get("SOURCE_DATE_EPOCH", "0"),
                 "REPODEST": "/dist",
+                "VBUILD_WORKDIR": directory,
             },
         }
         teardown = []

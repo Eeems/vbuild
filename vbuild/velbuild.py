@@ -93,7 +93,14 @@ class VELBUILD(APKBUILD):
 
         runtime = containers.runtime()
         assert runtime is not None
-        _tab = " " * 4
+        match runtime:
+            case "podman":
+                runtime += " --remote"
+
+            case "docker":
+                pass
+
+        tab = " " * 4
         for name, value in functions.items():
             if name in INSTALL_FUNCTION_NAMES or name in subpackage_functions:
                 continue
@@ -102,24 +109,27 @@ class VELBUILD(APKBUILD):
             if name == "build" and self.image is not None:
                 # Use heredoc with unique delimiter to write build script
                 value = (  # noqa: PLW2901
-                    f"{_tab}script=$(mktemp)\n"
-                    + f"{_tab}cat > \"$script\" << 'VBUILD_BUILD_SCRIPT'\n"
+                    f'{tab}script="$(tr -dc A-Za-z0-9 </dev/urandom | head -c 13).build.sh"\n'
+                    + f"{tab}cat > \"$script\" << 'VBUILD_BUILD_SCRIPT'\n"
+                    + "#!/bin/sh\n"
+                    + f"{tab}cd /work\n"
                     + f"{value}\n"
                     + "VBUILD_BUILD_SCRIPT\n"
-                    + f"{_tab}{runtime} run --rm \\\n"
-                    + f"{_tab}  -v /work:/work \\\n"
-                    + f"{_tab}  -v /dist:/dist \\\n"
-                    + f"{_tab}  -v /var/cache/distfiles:/var/cache/distfiles \\\n"
-                    + f'{_tab}  -v "$script:/tmp/build.sh:ro" \\\n'
-                    + f"{_tab}  -e CARCH \\\n"
-                    + f"{_tab}  -e SOURCE_DATE_EPOCH \\\n"
-                    + f"{_tab}  -e REPODEST=/dist \\\n"
-                    + f'{_tab}  --workdir "$builddir" \\\n'
-                    + f"{_tab}  {quoted_string(self.image)} \\\n"  # pyright: ignore[reportAny]
-                    + f"{_tab}  sh /tmp/build.sh\n"
-                    + f"{_tab}_ret=$?\n"
-                    + f'{_tab}rm -f "$script"\n'
-                    + f"{_tab}return $_ret\n"
+                    + "set +e\n"
+                    + f"{tab}{runtime} run --rm \\\n"
+                    + f"{tab}  -v $VBUILD_WORKDIR:/work \\\n"
+                    + f"{tab}  -v $script:/build.sh:ro \\\n"
+                    + f"{tab}  -e CARCH \\\n"
+                    + f"{tab}  -e SOURCE_DATE_EPOCH \\\n"
+                    + f"{tab}  -e REPODEST \\\n"
+                    + f'{tab}  --workdir "$builddir" \\\n'
+                    + f"{tab}  {quoted_string(self.image)} \\\n"  # pyright: ignore[reportAny]
+                    + f"{tab}  sh /build.sh\n"
+                    + f"{tab}_ret=$?\n"
+                    + f'{tab}rm -f "$script"\n'
+                    + f"{tab}if [ $_ret -ne 0 ];then\n"
+                    + f"{tab}{tab}exit $_ret\n"
+                    + f"{tab}fi\n"
                 )
 
             elif name == "package":

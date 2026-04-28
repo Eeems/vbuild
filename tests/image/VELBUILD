@@ -18,7 +18,7 @@ rcctl::https://raw.githubusercontent.com/$upstream_author/toltec/$_commit/packag
 LICENSE::https://raw.githubusercontent.com/$upstream_author/toltec/$_commit/LICENSE
 "
 
-image="hello-world"
+image="alpine:3"
 build() {
 	true
 }
