@@ -2,7 +2,11 @@ import json
 import os
 from collections.abc import Generator
 from contextlib import contextmanager
-from typing import Any, cast
+from typing import (
+    Any,
+    Literal,
+    cast,
+)
 
 import docker
 import podman
@@ -80,3 +84,14 @@ def from_env() -> Generator[podman.PodmanClient, None, None]:
 
     else:
         raise ExceptionGroup("Unable to connect to docker or podman", errors)
+
+
+def runtime() -> Literal["podman"] | Literal["docker"] | None:
+    with from_env() as client:
+        if isinstance(client, podman.PodmanClient):  # pyright: ignore[reportUnnecessaryIsInstance]
+            return "podman"
+
+        if isinstance(client, docker.DockerClient):  # pyright: ignore[reportUnnecessaryIsInstance]
+            return "docker"
+
+        return None

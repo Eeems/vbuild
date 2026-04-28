@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 import sys
 import traceback
 from collections.abc import Callable
@@ -11,6 +12,7 @@ from vbuild.apkbuild import (
     StringProperty,
     quoted_string,
 )
+from vbuild.velbuild import VELBUILD
 
 FAILED = False
 
@@ -137,6 +139,40 @@ _assert("apkbuild.text.strip() == \"maintainer='test'\\narch='\\ntest\\n'\"")
 apkbuild.arch = ["test", "test2"]
 _assert('apkbuild.arch == ["test", "test2"]')
 _assert("apkbuild.text.strip() == \"maintainer='test'\\narch='\\ntest\\ntest2\\n'\"")
+
+# Test VELBUILD image property
+_isinstance("VELBUILD.image", StringProperty)
+velbuild = VELBUILD({}, {})
+_assert("velbuild.image is None")
+velbuild.image = "my-custom-image:latest"
+_assert('velbuild.image == "my-custom-image:latest"')
+_raises('setattr(velbuild, "image", 1)', AssertionError)
+
+# Test that image does NOT appear in generated APKBUILD text
+velbuild.pkgname = "test-pkg"
+velbuild.pkgver = "1.0"
+velbuild.pkgrel = "0"
+os.environ["VBUILD_DRIVER"] = "docker"
+text = velbuild.text
+_assert("'image=' not in text", lambda: text)
+_assert("'my-custom-image' not in text", lambda: text)
+
+# Test that build() function gets wrapped when image is set
+velbuild.functions["build"] = "echo 'building...'"
+os.environ["VBUILD_DRIVER"] = "podman"
+text = velbuild.text
+_assert("'_vbuild_image' in text", lambda: text)
+_assert("'my-custom-image:latest' in text", lambda: text)
+_assert("'podman run' in text", lambda: text)
+
+# Test that build() function is NOT wrapped when image is not set
+velbuild2 = VELBUILD({}, {})
+velbuild2.pkgname = "test-pkg2"
+velbuild2.pkgver = "1.0"
+velbuild2.pkgrel = "0"
+velbuild2.functions["build"] = "echo 'building...'"
+text2 = velbuild2.text
+_assert("'_vbuild_image' not in text2", lambda: text2)
 
 if FAILED:
     sys.exit(1)

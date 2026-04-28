@@ -7,7 +7,10 @@ from typing import (
     override,
 )
 
-from . import bash
+from . import (
+    bash,
+    containers,
+)
 from .apkbuild import (
     APKBUILD,
     APKBUILD_AUTOMATIC_VARIABLES,
@@ -54,7 +57,7 @@ class VELBUILD(APKBUILD):
             ):
                 continue
 
-            if name == "systemdunits":
+            if name in ("systemdunits", "image"):
                 continue
 
             if name in ("upstream_author", "category"):
@@ -88,20 +91,47 @@ class VELBUILD(APKBUILD):
         if "package" not in functions:
             functions["package"] = "\n"
 
+        runtime = containers.runtime()
+        assert runtime is not None
+        _tab = " " * 4
         for name, value in functions.items():
             if name in INSTALL_FUNCTION_NAMES or name in subpackage_functions:
                 continue
 
-            if name == "package" and (
-                self.postosupgrade is not None or self.systemdunits  # pyright: ignore[reportAny]
-            ):
-                fn_name = INSTALL_FUNCTION_NAME_MAP["postosupgrade"]
-                value += f'{tab}install -Dm755 "$startdir"/"$pkgname".{fn_name} '  # noqa: PLW2901
-                value += (  # noqa: PLW2901
-                    '"$pkgdir"/home/root/.vellum/hooks/post-os-upgrade/"$pkgname";\n'  # noqa: PLW2901
+            # Wrap build() function with container if image property is set
+            if name == "build" and self.image is not None:
+                # Use heredoc with unique delimiter to write build script
+                value = (  # noqa: PLW2901
+                    f"{_tab}script=$(mktemp)\n"
+                    f"{_tab}cat > \"$script\" << 'VBUILD_BUILD_SCRIPT'\n"
+                    f"{value}\n"
+                    f"VBUILD_BUILD_SCRIPT\n"
+                    f"{_tab}{runtime} run --rm \\\n"
+                    f"{_tab}  -v /work:/work \\\n"
+                    f"{_tab}  -v /dist:/dist \\\n"
+                    f"{_tab}  -v /var/cache/distfiles:/var/cache/distfiles \\\n"
+                    f'{_tab}  -v "$script:/tmp/build.sh:ro" \\\n'
+                    f"{_tab}  -e CARCH \\\n"
+                    f"{_tab}  -e SOURCE_DATE_EPOCH \\\n"
+                    f"{_tab}  -e REPODEST=/dist \\\n"
+                    f'{_tab}  --workdir "$builddir" \\\n'
+                    f'{_tab}  "{quoted_string(self.image)}" \\\n'  # pyright: ignore[reportAny]
+                    f"{_tab}  sh /tmp/build.sh\n"
+                    f"{_tab}_ret=$?\n"
+                    f'{_tab}rm -f "$script"\n'
+                    f"{_tab}return $_ret\n"
                 )
 
-            if name == "package":
+            elif name == "package":
+                if (
+                    self.postosupgrade is not None or self.systemdunits  # pyright: ignore[reportAny]
+                ):
+                    fn_name = INSTALL_FUNCTION_NAME_MAP["postosupgrade"]
+                    value += f'{tab}install -Dm755 "$startdir"/"$pkgname".{fn_name} '  # noqa: PLW2901
+                    value += (  # noqa: PLW2901
+                        '"$pkgdir"/home/root/.vellum/hooks/post-os-upgrade/"$pkgname";\n'  # noqa: PLW2901
+                    )
+
                 for unit in self.systemdunits:  # pyright: ignore[reportAny]
                     unit_name = os.path.basename(unit)  # pyright: ignore[reportAny]
                     value += f'{tab}install -Dm644 "$srcdir/{unit}" "$pkgdir/home/root/.vellum/share/{self.pkgname}/{unit_name}";\n'  # noqa: PLW2901  # pyright: ignore[reportAny]
@@ -314,6 +344,10 @@ class VELBUILD(APKBUILD):
     @string_array_property
     def systemdunits(self, value: list[str] | None) -> list[str]:
         return value or []
+
+    @string_property
+    def image(self, value: str | None) -> str | None:
+        return value
 
     def _getsrc(self, name: str) -> str | None:
         src = self.functions.get(name, None)
