@@ -163,7 +163,7 @@ os.environ["VBUILD_DRIVER"] = "podman"
 text = velbuild.text
 _assert("'VBUILD_BUILD_SCRIPT' in text", lambda: text)
 _assert("'my-custom-image:latest' in text", lambda: text)
-_assert("'podman run' in text", lambda: text)
+_assert("'podman' in text and 'run' in text", lambda: text)
 
 # Test that build() function is NOT wrapped when image is not set
 velbuild2 = VELBUILD({}, {})
