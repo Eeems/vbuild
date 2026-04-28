@@ -20,7 +20,11 @@ LICENSE::https://raw.githubusercontent.com/$upstream_author/toltec/$_commit/LICE
 
 image="alpine:3"
 build() {
-	true
+	test=1
+	if [ $test -ne 1 ]; then
+		echo "Somehow \$test isn't being set properly"
+		exit 1
+	fi
 }
 
 package() {
