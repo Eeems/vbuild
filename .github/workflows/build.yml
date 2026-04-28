@@ -295,7 +295,7 @@ jobs:
         env:
           script: |
             cd $srcdir
-            if [[ "${{matrix.libc }}" == "musl" ]];then
+            if [[ "${{ matrix.libc }}" == "musl" ]];then
               apk add --no-cache bash
             fi
             if [ -f tests/${{ matrix.path }}/validate.sh ];then
@@ -314,19 +314,13 @@ jobs:
     steps:
       - name: Checkout the Git repository
         uses: actions/checkout@v6
-      - name: Download artifact
-        id: download
-        uses: actions/download-artifact@v8
-        with:
-          pattern: pip-*
-          merge-multiple: true
-          path: dist
       - name: Download executables
+        id: download
         uses: actions/download-artifact@v8
         with:
           pattern: executable-*
           merge-multiple: true
-          path: ${{ steps.download.outputs.download-path }}
+          path: dist
       - name: Upload to release
         run: find . -type f | xargs -rI {} gh release upload "$TAG" {} --clobber
         env:
