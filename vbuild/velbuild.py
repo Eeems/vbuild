@@ -7,7 +7,10 @@ from typing import (
     override,
 )
 
-from . import bash
+from . import (
+    bash,
+    containers,
+)
 from .apkbuild import (
     APKBUILD,
     APKBUILD_AUTOMATIC_VARIABLES,
@@ -54,7 +57,7 @@ class VELBUILD(APKBUILD):
             ):
                 continue
 
-            if name == "systemdunits":
+            if name in ("systemdunits", "image"):
                 continue
 
             if name in ("upstream_author", "category"):
@@ -88,20 +91,57 @@ class VELBUILD(APKBUILD):
         if "package" not in functions:
             functions["package"] = "\n"
 
+        runtime = containers.runtime()
+        assert runtime is not None
+        match runtime:
+            case "podman":
+                runtime += " --remote"
+
+            case "docker":
+                pass
+
+        tab = " " * 4
         for name, value in functions.items():
             if name in INSTALL_FUNCTION_NAMES or name in subpackage_functions:
                 continue
 
-            if name == "package" and (
-                self.postosupgrade is not None or self.systemdunits  # pyright: ignore[reportAny]
-            ):
-                fn_name = INSTALL_FUNCTION_NAME_MAP["postosupgrade"]
-                value += f'{tab}install -Dm755 "$startdir"/"$pkgname".{fn_name} '  # noqa: PLW2901
-                value += (  # noqa: PLW2901
-                    '"$pkgdir"/home/root/.vellum/hooks/post-os-upgrade/"$pkgname";\n'  # noqa: PLW2901
+            # Wrap build() function with container if image property is set
+            if name == "build" and self.image is not None:
+                # Use heredoc with unique delimiter to write build script
+                value = (  # noqa: PLW2901
+                    f'{tab}script="$(tr -dc A-Za-z0-9 </dev/urandom | head -c 13).build.sh"\n'
+                    + f"{tab}cat > \"$script\" << 'VBUILD_BUILD_SCRIPT'\n"
+                    + "#!/bin/sh\n"
+                    + f"{tab}cd /work\n"
+                    + f"{value}\n"
+                    + "VBUILD_BUILD_SCRIPT\n"
+                    + "set +e\n"
+                    + f"{tab}{runtime} run --rm \\\n"
+                    + f"{tab}  -v $VBUILD_WORKDIR:/work \\\n"
+                    + f"{tab}  -v $script:/build.sh:ro \\\n"
+                    + f"{tab}  -e CARCH \\\n"
+                    + f"{tab}  -e SOURCE_DATE_EPOCH \\\n"
+                    + f"{tab}  -e REPODEST \\\n"
+                    + f'{tab}  --workdir "$builddir" \\\n'
+                    + f"{tab}  {quoted_string(self.image)} \\\n"  # pyright: ignore[reportAny]
+                    + f"{tab}  sh /build.sh\n"
+                    + f"{tab}_ret=$?\n"
+                    + f'{tab}rm -f "$script"\n'
+                    + f"{tab}if [ $_ret -ne 0 ];then\n"
+                    + f"{tab}{tab}exit $_ret\n"
+                    + f"{tab}fi\n"
                 )
 
-            if name == "package":
+            elif name == "package":
+                if (
+                    self.postosupgrade is not None or self.systemdunits  # pyright: ignore[reportAny]
+                ):
+                    fn_name = INSTALL_FUNCTION_NAME_MAP["postosupgrade"]
+                    value += f'{tab}install -Dm755 "$startdir"/"$pkgname".{fn_name} '  # noqa: PLW2901
+                    value += (  # noqa: PLW2901
+                        '"$pkgdir"/home/root/.vellum/hooks/post-os-upgrade/"$pkgname";\n'  # noqa: PLW2901
+                    )
+
                 for unit in self.systemdunits:  # pyright: ignore[reportAny]
                     unit_name = os.path.basename(unit)  # pyright: ignore[reportAny]
                     value += f'{tab}install -Dm644 "$srcdir/{unit}" "$pkgdir/home/root/.vellum/share/{self.pkgname}/{unit_name}";\n'  # noqa: PLW2901  # pyright: ignore[reportAny]
@@ -314,6 +354,10 @@ class VELBUILD(APKBUILD):
     @string_array_property
     def systemdunits(self, value: list[str] | None) -> list[str]:
         return value or []
+
+    @string_property
+    def image(self, value: str | None) -> str | None:
+        return value
 
     def _getsrc(self, name: str) -> str | None:
         src = self.functions.get(name, None)

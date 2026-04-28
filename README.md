@@ -62,6 +62,10 @@ A function containing the contents of $pkgname.post-os-upgrade.See [vellum-dev/v
 
 A string array of filenames for systemd units to automatically deploy, enable, start, stop and disable as part of the package workflow. Template units will be disabled, but have to manually be enabled, started, and stopped.
 
+#### image
+
+Container image to use when running the build function.
+
 ### Configuration files
 
 vbuild will generate keys in `~/.config/vbuild` that will be used to sign any packages produced. You can override these files if you wish to use your own pre-generated keys.

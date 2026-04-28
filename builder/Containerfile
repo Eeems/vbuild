@@ -1,5 +1,9 @@
 FROM alpine:3
 
 RUN apk add --no-cache \
-	alpine-sdk \
-	atools
+  alpine-sdk \
+  atools \
+  podman \
+  docker-cli
+
+RUN mkdir -p /run/podman && chmod 777 /run/podman

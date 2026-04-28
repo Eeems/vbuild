@@ -7,10 +7,10 @@ from collections.abc import (
     Iterator,
 )
 from hashlib import sha256
-from typing import Any
-
-import docker
-import podman
+from typing import (
+    Any,
+    cast,
+)
 
 from . import containers
 
@@ -65,14 +65,9 @@ def abuild(
         f.writelines(lines)
 
     with containers.from_env() as client:
-        if isinstance(client, podman.PodmanClient):  # pyright: ignore[reportUnnecessaryIsInstance]
-            print("Container driver: Podman", file=sys.stderr)
-
-        elif isinstance(client, docker.DockerClient):  # pyright: ignore[reportUnnecessaryIsInstance]
-            print("Container driver: Docker", file=sys.stderr)
-
-        else:
-            raise Exception("Container driver: Unknown")
+        runtime = containers.runtime()
+        assert runtime is not None
+        print(f"Container driver: {runtime}", file=sys.stderr)
 
         global has_pulled
         if not has_pulled:
@@ -103,19 +98,33 @@ def abuild(
                 "CARCH": os.environ.get("CARCH", "noarch"),
                 "SOURCE_DATE_EPOCH": os.environ.get("SOURCE_DATE_EPOCH", "0"),
                 "REPODEST": "/dist",
+                "VBUILD_WORKDIR": directory,
             },
         }
         teardown = []
-        if isinstance(client, podman.PodmanClient):  # pyright: ignore[reportUnnecessaryIsInstance]
-            run_kwargs["volumes"][directory] = {"bind": "/work", "mode": "Z"}
-            teardown = TEARDOWN_CONTAINER_PODMAN
+        match runtime:
+            case "podman":
+                run_kwargs["volumes"][directory] = {"bind": "/work", "mode": "Z"}
+                socket_uri = cast(str, client.info()["host"]["remoteSocket"]["path"])  # pyright: ignore[reportUnknownMemberType]
+                socket = (
+                    socket_uri.split("://", 1)[1] if "://" in socket_uri else socket_uri
+                )
+                run_kwargs["volumes"][socket] = {
+                    "bind": "/run/podman/podman.sock",
+                    "mode": "rw",
+                }
+                teardown = TEARDOWN_CONTAINER_PODMAN
 
-        elif isinstance(client, docker.DockerClient):  # pyright: ignore[reportUnnecessaryIsInstance]
-            run_kwargs["volumes"][directory] = {"bind": "/work", "mode": "Z"}
-            teardown = TEARDOWN_CONTAINER_DOCKER
+            case "docker":
+                run_kwargs["volumes"][directory] = {"bind": "/work", "mode": "Z"}
+                run_kwargs["volumes"]["/var/run/docker.sock"] = {
+                    "bind": "/var/run/docker.sock",
+                    "mode": "rw",
+                }
+                teardown = TEARDOWN_CONTAINER_DOCKER
 
         container = client.containers.run(  # pyright: ignore[reportUnknownMemberType]
-            "ghcr.io/eeems/vbuild-builder:main",
+            f"ghcr.io/eeems/vbuild-builder:{os.environ.get('VBUILD_BUILDER_TAG', 'main')}",
             [
                 "sh",
                 "-ec",
