@@ -161,7 +161,7 @@ _assert("'my-custom-image' not in text", lambda: text)
 velbuild.functions["build"] = "echo 'building...'"
 os.environ["VBUILD_DRIVER"] = "podman"
 text = velbuild.text
-_assert("'_vbuild_image' in text", lambda: text)
+_assert("'VBUILD_BUILD_SCRIPT' in text", lambda: text)
 _assert("'my-custom-image:latest' in text", lambda: text)
 _assert("'podman run' in text", lambda: text)
 
@@ -172,7 +172,7 @@ velbuild2.pkgver = "1.0"
 velbuild2.pkgrel = "0"
 velbuild2.functions["build"] = "echo 'building...'"
 text2 = velbuild2.text
-_assert("'_vbuild_image' not in text2", lambda: text2)
+_assert("'VBUILD_BUILD_SCRIPT' not in text2", lambda: text2)
 
 if FAILED:
     sys.exit(1)
