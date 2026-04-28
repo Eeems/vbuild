@@ -123,7 +123,7 @@ def abuild(
                 teardown = TEARDOWN_CONTAINER_DOCKER
 
         container = client.containers.run(  # pyright: ignore[reportUnknownMemberType]
-            "ghcr.io/eeems/vbuild-builder:main",
+            f"ghcr.io/eeems/vbuild-builder:{os.environ.get('VBUILD_BUILDER_TAG', 'main')}",
             [
                 "sh",
                 "-ec",
