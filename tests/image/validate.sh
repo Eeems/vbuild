@@ -44,3 +44,8 @@ if ! grep -Fq 'postinstall() {' entware-rc.post-upgrade; then
   echo "postinstall() method missing from entware-rc.post-upgrade"
   exit 1
 fi
+
+if ! grep -Fq 'VBUILD_BUILD_SCRIPT' APKBUILD; then
+  echo "VBUILD_BUILD_SCRIPT missing from APKBUILD"
+  exit 1
+fi
