@@ -181,7 +181,7 @@ jobs:
           mv vbuild-${{ matrix.arch }}-*-${{ matrix.libc }} vbuild
       - uses: actions/upload-artifact@v6
         with:
-          name: vbuild-${{ matrix.arch }}-${{ matrix.libc }}
+          name: executable-${{ matrix.arch }}-${{ matrix.libc }}
           path: dist/*
           if-no-files-found: error
 
@@ -212,7 +212,7 @@ jobs:
         id: download
         uses: actions/download-artifact@v8
         with:
-          name: vbuild-${{ matrix.arch }}-${{ matrix.libc }}
+          name: executable-${{ matrix.arch }}-${{ matrix.libc }}
           path: dist
       - name: Run vbuild
         shell: bash
@@ -328,7 +328,7 @@ jobs:
           merge-multiple: true
           path: ${{ steps.download.outputs.download-path }}
       - name: Upload to release
-        run: find . -type f | xargs -rI { gh release upload "$TAG" {} --clobber
+        run: find . -type f | xargs -rI {} gh release upload "$TAG" {} --clobber
         env:
           GH_TOKEN: ${{ github.token }}
           TAG: ${{ github.event.release.tag_name }}
