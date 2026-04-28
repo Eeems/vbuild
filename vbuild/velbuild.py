@@ -103,23 +103,23 @@ class VELBUILD(APKBUILD):
                 # Use heredoc with unique delimiter to write build script
                 value = (  # noqa: PLW2901
                     f"{_tab}script=$(mktemp)\n"
-                    f"{_tab}cat > \"$script\" << 'VBUILD_BUILD_SCRIPT'\n"
-                    f"{value}\n"
-                    f"VBUILD_BUILD_SCRIPT\n"
-                    f"{_tab}{runtime} run --rm \\\n"
-                    f"{_tab}  -v /work:/work \\\n"
-                    f"{_tab}  -v /dist:/dist \\\n"
-                    f"{_tab}  -v /var/cache/distfiles:/var/cache/distfiles \\\n"
-                    f'{_tab}  -v "$script:/tmp/build.sh:ro" \\\n'
-                    f"{_tab}  -e CARCH \\\n"
-                    f"{_tab}  -e SOURCE_DATE_EPOCH \\\n"
-                    f"{_tab}  -e REPODEST=/dist \\\n"
-                    f'{_tab}  --workdir "$builddir" \\\n'
-                    f'{_tab}  "{quoted_string(self.image)}" \\\n'  # pyright: ignore[reportAny]
-                    f"{_tab}  sh /tmp/build.sh\n"
-                    f"{_tab}_ret=$?\n"
-                    f'{_tab}rm -f "$script"\n'
-                    f"{_tab}return $_ret\n"
+                    + f"{_tab}cat > \"$script\" << 'VBUILD_BUILD_SCRIPT'\n"
+                    + f"{value}\n"
+                    + "VBUILD_BUILD_SCRIPT\n"
+                    + f"{_tab}{runtime} run --rm \\\n"
+                    + f"{_tab}  -v /work:/work \\\n"
+                    + f"{_tab}  -v /dist:/dist \\\n"
+                    + f"{_tab}  -v /var/cache/distfiles:/var/cache/distfiles \\\n"
+                    + f'{_tab}  -v "$script:/tmp/build.sh:ro" \\\n'
+                    + f"{_tab}  -e CARCH \\\n"
+                    + f"{_tab}  -e SOURCE_DATE_EPOCH \\\n"
+                    + f"{_tab}  -e REPODEST=/dist \\\n"
+                    + f'{_tab}  --workdir "$builddir" \\\n'
+                    + f"{_tab}  {quoted_string(self.image)} \\\n"  # pyright: ignore[reportAny]
+                    + f"{_tab}  sh /tmp/build.sh\n"
+                    + f"{_tab}_ret=$?\n"
+                    + f'{_tab}rm -f "$script"\n'
+                    + f"{_tab}return $_ret\n"
                 )
 
             elif name == "package":
