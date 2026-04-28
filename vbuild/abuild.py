@@ -105,8 +105,9 @@ def abuild(
             case "podman":
                 run_kwargs["volumes"][directory] = {"bind": "/work", "mode": "Z"}
                 socket_uri = cast(str, client.info()["host"]["remoteSocket"]["path"])  # pyright: ignore[reportUnknownMemberType]
-                print(f"Socket: {socket_uri}")
-                socket = socket_uri.split("://", 1)[1]
+                socket = (
+                    socket_uri.split("://", 1)[1] if "://" in socket_uri else socket_uri
+                )
                 run_kwargs["volumes"][socket] = {
                     "bind": "/run/podman/podman.sock",
                     "mode": "rw",
