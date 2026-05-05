@@ -14,6 +14,7 @@ from . import (
 from .apkbuild import (
     APKBUILD,
     APKBUILD_AUTOMATIC_VARIABLES,
+    APKBUILD_VARIABLES,
     ErrorType,
     put_variables,
     quoted_string,
@@ -114,11 +115,12 @@ class VELBUILD(APKBUILD):
                     + f"{value}\n"
                     + "VBUILD_BUILD_SCRIPT\n"
                     + f"{tab}set +e\n"
+                    + (" \\\n".join(f"{tab} {x}=${x}" for x in APKBUILD_VARIABLES))
+                    + " \\\n"
                     + f"{tab}{runtime} run --rm \\\n"
                     + f"{tab}  -v $VBUILD_WORKDIR:/work \\\n"
-                    + f"{tab}  -e CARCH \\\n"
-                    + f"{tab}  -e SOURCE_DATE_EPOCH \\\n"
-                    + f"{tab}  -e REPODEST \\\n"
+                    + (" \\\n".join(f"{tab}  -e {x}" for x in APKBUILD_VARIABLES))
+                    + " \\\n"
                     + f'{tab}  --workdir "$builddir" \\\n'
                     + f"{tab}  {quoted_string(self.image)} \\\n"  # pyright: ignore[reportAny]
                     + f"{tab}  sh $(pwd)/$script\n"
