@@ -105,26 +105,23 @@ class VELBUILD(APKBUILD):
             if name in INSTALL_FUNCTION_NAMES or name in subpackage_functions:
                 continue
 
-            # Wrap build() function with container if image property is set
             if name == "build" and self.image is not None:
-                # Use heredoc with unique delimiter to write build script
                 value = (  # noqa: PLW2901
-                    f'{tab}script="$(tr -dc A-Za-z0-9 </dev/urandom | head -c 13).build.sh"\n'
+                    f'\n{tab}script="$(tr -dc A-Za-z0-9 </dev/urandom | head -c 13).build.sh"\n'
                     + f"{tab}cat > \"$script\" << 'VBUILD_BUILD_SCRIPT'\n"
                     + "#!/bin/sh\n"
-                    + f"{tab}cd /work\n"
+                    + "cd /work\n"
                     + f"{value}\n"
                     + "VBUILD_BUILD_SCRIPT\n"
-                    + "set +e\n"
+                    + f"{tab}set +e\n"
                     + f"{tab}{runtime} run --rm \\\n"
                     + f"{tab}  -v $VBUILD_WORKDIR:/work \\\n"
-                    + f"{tab}  -v $script:/build.sh:ro \\\n"
                     + f"{tab}  -e CARCH \\\n"
                     + f"{tab}  -e SOURCE_DATE_EPOCH \\\n"
                     + f"{tab}  -e REPODEST \\\n"
                     + f'{tab}  --workdir "$builddir" \\\n'
                     + f"{tab}  {quoted_string(self.image)} \\\n"  # pyright: ignore[reportAny]
-                    + f"{tab}  sh /build.sh\n"
+                    + f"{tab}  sh $(pwd)/$script\n"
                     + f"{tab}_ret=$?\n"
                     + f'{tab}rm -f "$script"\n'
                     + f"{tab}if [ $_ret -ne 0 ];then\n"
