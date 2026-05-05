@@ -115,7 +115,7 @@ class VELBUILD(APKBUILD):
                     + f"{value}\n"
                     + "VBUILD_BUILD_SCRIPT\n"
                     + f"{tab}set +e\n"
-                    + (" \\\n".join(f"{tab} {x}=${x}" for x in APKBUILD_VARIABLES))
+                    + (" \\\n".join(f'{tab} {x}="${x}"' for x in APKBUILD_VARIABLES))
                     + " \\\n"
                     + f"{tab}{runtime} run --rm \\\n"
                     + f"{tab}  -v $VBUILD_WORKDIR:/work \\\n"
