@@ -18,8 +18,14 @@ rcctl::https://raw.githubusercontent.com/$upstream_author/toltec/$_commit/packag
 LICENSE::https://raw.githubusercontent.com/$upstream_author/toltec/$_commit/LICENSE
 "
 
-image="alpine:3"
+image="alpine:3.22"
 build() {
+	. /etc/os-release
+	if [[ "$ID" != "alpine" ]] || [[ "$VERSION_ID" != "3.22."* ]]; then
+		echo "Not running inside alpine contianer, or version is wrong"
+		echo "'$ID $VERSION_ID' found instead of 'alpine 3.22.'*"
+		exit 1
+	fi
 	test=1
 	if [ $test -ne 1 ]; then
 		echo "Somehow \$test isn't being set properly"
