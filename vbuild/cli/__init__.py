@@ -25,6 +25,7 @@ def main() -> int:
 | `$CARCH` | Architecture to compile package as. |
 | `$VBUILD_KEY_NAME` | Key name to use when signing packages. |
 | `$VBUILD_DRIVER` | Driver to use for running containers. Possible values are `podman` and `docker`. |
+| `$VBUILD_BUILDER_TAG` | Tag to use for the builder container. Defaults to `main`. |
                     """,
                 style="argparse.txt",
             ),
