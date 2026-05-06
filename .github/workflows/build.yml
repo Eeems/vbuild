@@ -192,7 +192,7 @@ jobs:
         run: |
           set -e
           cd dist
-          mv vbuild-${{ matrix.arch }}-*-${{ matrix.libc }} vbuild
+          mv vbuild-${{ matrix.arch }}-*-${{ matrix.libc }} vbuild-${{ matrix.arch }}-${{ matrix.libc }}
       - uses: actions/upload-artifact@v6
         with:
           name: executable-${{ matrix.arch }}-${{ matrix.libc }}
@@ -275,7 +275,7 @@ jobs:
                 ${{ matrix.driver }}
             fi
             echo "Running vbuild..."
-            chmod +x dist/vbuild
+            chmod +x dist/vbuild-${{ matrix.arch }}-${{ matrix.libc }}
             action=all
             if [ -f "tests/${{ matrix.path }}/action" ];then
               action="$(cat "tests/${{ matrix.path }}/action")"
@@ -286,7 +286,7 @@ jobs:
             fi
             CARCH=$CARCH \
             VBUILD_DRIVER=$driver \
-            dist/vbuild -C "tests/${{ matrix.path }}" "$action"
+            dist/vbuild-${{ matrix.arch }}-${{ matrix.libc }} -C "tests/${{ matrix.path }}" "$action"
       - name: Validate output
         if: "!cancelled()"
         shell: bash
