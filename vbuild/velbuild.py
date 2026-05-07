@@ -6,7 +6,6 @@ from typing import (
     cast,
     override,
 )
-from urllib.error import URLError
 from urllib.parse import urlparse
 from urllib.request import (
     Request,
