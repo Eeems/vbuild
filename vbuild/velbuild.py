@@ -229,7 +229,14 @@ class VELBUILD(APKBUILD):
         if parsed.scheme not in ("http", "https"):
             raise ValueError(f"Unsupported URL schema: {parsed.scheme}")
 
-        with urlopen(Request(url, method="HEAD"), timeout=10) as res:  # noqa: S310  # pyright: ignore[reportAny]
+        with urlopen(  # noqa: S310
+            Request(  # noqa: S310
+                url,
+                method="HEAD",
+                headers={"User-Agent": "vbuild"},
+            ),
+            timeout=10,
+        ) as res:  # pyright: ignore[reportAny]
             if res.status >= 300:  # pyright: ignore[reportAny]
                 raise ValueError(f"Unexpected response code: {res.status}")  # pyright: ignore[reportAny]
 
@@ -258,12 +265,6 @@ class VELBUILD(APKBUILD):
 
         except Exception as e:
             yield ErrorType.Error, f"url is not valid: {e}"
-
-        try:
-            self._validate_url(self.giturl)  # pyright: ignore[reportAny]
-
-        except Exception as e:
-            yield ErrorType.Error, f"giturl is not valid: {e}"
 
         if self.status not in (None, "maintained", "unmaintained", "deprecated"):  # pyright: ignore[reportAny]
             yield (
