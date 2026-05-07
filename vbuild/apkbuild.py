@@ -311,6 +311,12 @@ class APKBUILD:
         if self.maintainer is None:  # pyright: ignore[reportAny]
             yield ErrorType.Error, "maintainer is not set"
 
+        if self._status not in (None, "maintained", "unmaintained", "deprecated"):  # pyright: ignore[reportAny]
+            yield (
+                ErrorType.Error,
+                "_status is not valid, must be 'maintained', 'unmaintained', or 'deprecated'",
+            )
+
     @string_property
     def maintainer(self, value: str | None) -> str:
         assert value is not None

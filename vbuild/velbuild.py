@@ -254,7 +254,7 @@ class VELBUILD(APKBUILD):
         if self.giturl is not None and not self._validate_url(self.giturl):  # pyright: ignore[reportAny]
             yield ErrorType.Error, "giturl is not valid"
 
-        if self.status not in (None, "maintained", "unmaintained", "deprecated"):  # pyright: ignore[reportAny]\
+        if self.status not in (None, "maintained", "unmaintained", "deprecated"):  # pyright: ignore[reportAny]
             yield (
                 ErrorType.Error,
                 "status is not valid, must be 'maintained', 'unmaintained', or 'deprecated'",
