@@ -6,6 +6,12 @@ from typing import (
     cast,
     override,
 )
+from urllib.error import URLError
+from urllib.parse import urlparse
+from urllib.request import (
+    Request,
+    urlopen,
+)
 
 from . import (
     bash,
@@ -210,6 +216,18 @@ class VELBUILD(APKBUILD):
                 ) as f:
                     _ = f.write("\n".join([header, src, footer or ""]))
 
+    def _validate_url(self, url: str) -> bool:
+        parsed = urlparse(url)
+        if parsed.scheme not in ("http", "https"):
+            raise ValueError(f"Unsupported URL schema: {parsed.scheme}")
+
+        try:
+            with urlopen(Request(url, method="HEAD")) as res:  # noqa: S310  # pyright: ignore[reportAny]
+                return 200 <= res.status < 300  # pyright: ignore[reportAny]
+
+        except URLError:
+            return False
+
     @override
     def validate(self) -> Generator[tuple[ErrorType, str]]:
         if self.upstream_author is None:  # pyright: ignore[reportAny]
@@ -218,8 +236,14 @@ class VELBUILD(APKBUILD):
         if self.category is None:  # pyright: ignore[reportAny]
             yield ErrorType.Error, "category is not set"
 
-        if self.readme is None:  # pyright: ignore[reportAny]
-            yield ErrorType.Error, "readme is not set"
+        if self.readme is not None and not self._validate_url(self.readme):  # pyright: ignore[reportAny]
+            yield ErrorType.Error, "readme is not valid"
+
+        if self.url is not None and not self._validate_url(self.url):  # pyright: ignore[reportAny]
+            yield ErrorType.Error, "url is not valid"
+
+        if self.giturl is not None and not self._validate_url(self.giturl):  # pyright: ignore[reportAny]
+            yield ErrorType.Error, "giturl is not valid"
 
         pkgdesc_len = len(self.pkgdesc)  # pyright: ignore[reportAny]
         if pkgdesc_len >= 128:
