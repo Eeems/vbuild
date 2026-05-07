@@ -491,8 +491,16 @@ class APKBUILD:
         return value
 
     @string_property
-    def _readme(self, value: str | None) -> str | None:
+    def _readmeurl(self, value: str | None) -> str | None:
         return value
+
+    @string_property
+    def _donateurl(self, value: str | None) -> str | None:
+        return value
+
+    @string_property
+    def _status(self, value: str | None) -> str:
+        return value or "maintained"
 
     @string_property
     def sonameprefix(self, value: str | None) -> str | None:

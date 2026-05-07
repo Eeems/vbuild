@@ -67,7 +67,13 @@ class VELBUILD(APKBUILD):
             if name in ("systemdunits", "image"):
                 continue
 
-            if name in ("upstream_author", "category", "readme"):
+            if name in (
+                "upstream_author",
+                "category",
+                "readmeurl",
+                "donateurl",
+                "status",
+            ):
                 name = f"_{name}"  # noqa: PLW2901
 
             if isinstance(value, str):
@@ -236,14 +242,23 @@ class VELBUILD(APKBUILD):
         if self.category is None:  # pyright: ignore[reportAny]
             yield ErrorType.Error, "category is not set"
 
-        if self.readme is not None and not self._validate_url(self.readme):  # pyright: ignore[reportAny]
-            yield ErrorType.Error, "readme is not valid"
+        if self.readmeurl is not None and not self._validate_url(self.readmeurl):  # pyright: ignore[reportAny]
+            yield ErrorType.Error, "readmeurl is not valid"
+
+        if self.donateurl is not None and not self._validate_url(self.donateurl):  # pyright: ignore[reportAny]
+            yield ErrorType.Error, "donateurl is not valid"
 
         if self.url is not None and not self._validate_url(self.url):  # pyright: ignore[reportAny]
             yield ErrorType.Error, "url is not valid"
 
         if self.giturl is not None and not self._validate_url(self.giturl):  # pyright: ignore[reportAny]
             yield ErrorType.Error, "giturl is not valid"
+
+        if self.status not in (None, "maintained", "unmaintained", "deprecated"):  # pyright: ignore[reportAny]\
+            yield (
+                ErrorType.Error,
+                "status is not valid, must be 'maintained', 'unmaintained', or 'deprecated'",
+            )
 
         pkgdesc_len = len(self.pkgdesc)  # pyright: ignore[reportAny]
         if pkgdesc_len >= 128:
@@ -374,7 +389,15 @@ class VELBUILD(APKBUILD):
         return value
 
     @string_property
-    def readme(self, value: str | None) -> str | None:
+    def readmeurl(self, value: str | None) -> str | None:
+        return value
+
+    @string_property
+    def donateurl(self, value: str | None) -> str | None:
+        return value
+
+    @string_property
+    def status(self, value: str | None) -> str | None:
         return value
 
     @string_property
