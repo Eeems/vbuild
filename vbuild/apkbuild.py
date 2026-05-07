@@ -301,9 +301,6 @@ class APKBUILD:
         if self._category is None:  # pyright: ignore[reportAny]
             yield ErrorType.Error, "_category is not set"
 
-        if self._readme is None:  # pyright: ignore[reportAny]
-            yield ErrorType.Error, "_readme is not set"
-
         pkgdesc_len = len(self.pkgdesc)  # pyright: ignore[reportAny]
         if pkgdesc_len >= 128:
             yield (
