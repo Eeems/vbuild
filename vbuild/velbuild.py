@@ -61,7 +61,7 @@ class VELBUILD(APKBUILD):
             if name in ("systemdunits", "image"):
                 continue
 
-            if name in ("upstream_author", "category"):
+            if name in ("upstream_author", "category", "readme"):
                 name = f"_{name}"  # noqa: PLW2901
 
             if isinstance(value, str):
@@ -213,10 +213,13 @@ class VELBUILD(APKBUILD):
     @override
     def validate(self) -> Generator[tuple[ErrorType, str]]:
         if self.upstream_author is None:  # pyright: ignore[reportAny]
-            yield ErrorType.Error, "_upstream_author is not set"
+            yield ErrorType.Error, "upstream_author is not set"
 
         if self.category is None:  # pyright: ignore[reportAny]
-            yield ErrorType.Error, "_category is not set"
+            yield ErrorType.Error, "category is not set"
+
+        if self.readme is None:  # pyright: ignore[reportAny]
+            yield ErrorType.Error, "readme is not set"
 
         pkgdesc_len = len(self.pkgdesc)  # pyright: ignore[reportAny]
         if pkgdesc_len >= 128:
@@ -344,6 +347,10 @@ class VELBUILD(APKBUILD):
 
     @string_property
     def category(self, value: str | None) -> str | None:
+        return value
+
+    @string_property
+    def readme(self, value: str | None) -> str | None:
         return value
 
     @string_property

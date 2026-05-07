@@ -66,6 +66,10 @@ A string array of filenames for systemd units to automatically deploy, enable, s
 
 Container image to use when running the build function.
 
+#### readme
+
+Link to readme file for the package. This should return the readme for the specific version of the package, ideally by pointing at the tag, or commit hash, not the primary branch.
+
 ### Configuration files
 
 vbuild will generate keys in `~/.config/vbuild` that will be used to sign any packages produced. You can override these files if you wish to use your own pre-generated keys.
