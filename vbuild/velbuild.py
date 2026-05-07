@@ -6,6 +6,11 @@ from typing import (
     cast,
     override,
 )
+from urllib.parse import urlparse
+from urllib.request import (
+    Request,
+    urlopen,
+)
 
 from . import (
     bash,
@@ -61,7 +66,13 @@ class VELBUILD(APKBUILD):
             if name in ("systemdunits", "image"):
                 continue
 
-            if name in ("upstream_author", "category"):
+            if name in (
+                "upstream_author",
+                "category",
+                "readmeurl",
+                "donateurl",
+                "status",
+            ):
                 name = f"_{name}"  # noqa: PLW2901
 
             if isinstance(value, str):
@@ -210,13 +221,55 @@ class VELBUILD(APKBUILD):
                 ) as f:
                     _ = f.write("\n".join([header, src, footer or ""]))
 
+    def _validate_url(self, url: str | None) -> None:
+        if url is None:
+            return
+
+        parsed = urlparse(url)
+        if parsed.scheme not in ("http", "https"):
+            raise ValueError(f"Unsupported URL schema: {parsed.scheme}")
+
+        with urlopen(Request(url, method="HEAD"), timeout=10) as res:  # noqa: S310  # pyright: ignore[reportAny]
+            if res.status >= 300:  # pyright: ignore[reportAny]
+                raise ValueError(f"Unexpected response code: {res.status}")  # pyright: ignore[reportAny]
+
     @override
     def validate(self) -> Generator[tuple[ErrorType, str]]:
         if self.upstream_author is None:  # pyright: ignore[reportAny]
-            yield ErrorType.Error, "_upstream_author is not set"
+            yield ErrorType.Error, "upstream_author is not set"
 
         if self.category is None:  # pyright: ignore[reportAny]
-            yield ErrorType.Error, "_category is not set"
+            yield ErrorType.Error, "category is not set"
+
+        try:
+            self._validate_url(self.readmeurl)  # pyright: ignore[reportAny]
+
+        except Exception as e:
+            yield ErrorType.Error, f"readmeurl is not valid: {e}"
+
+        try:
+            self._validate_url(self.donateurl)  # pyright: ignore[reportAny]
+
+        except Exception as e:
+            yield ErrorType.Error, f"donateurl is not valid: {e}"
+
+        try:
+            self._validate_url(self.url)  # pyright: ignore[reportAny]
+
+        except Exception as e:
+            yield ErrorType.Error, f"url is not valid: {e}"
+
+        try:
+            self._validate_url(self.giturl)  # pyright: ignore[reportAny]
+
+        except Exception as e:
+            yield ErrorType.Error, f"giturl is not valid: {e}"
+
+        if self.status not in (None, "maintained", "unmaintained", "deprecated"):  # pyright: ignore[reportAny]
+            yield (
+                ErrorType.Error,
+                "status is not valid, must be 'maintained', 'unmaintained', or 'deprecated'",
+            )
 
         pkgdesc_len = len(self.pkgdesc)  # pyright: ignore[reportAny]
         if pkgdesc_len >= 128:
@@ -344,6 +397,18 @@ class VELBUILD(APKBUILD):
 
     @string_property
     def category(self, value: str | None) -> str | None:
+        return value
+
+    @string_property
+    def readmeurl(self, value: str | None) -> str | None:
+        return value
+
+    @string_property
+    def donateurl(self, value: str | None) -> str | None:
+        return value
+
+    @string_property
+    def status(self, value: str | None) -> str | None:
         return value
 
     @string_property

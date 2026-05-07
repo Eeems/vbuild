@@ -311,6 +311,12 @@ class APKBUILD:
         if self.maintainer is None:  # pyright: ignore[reportAny]
             yield ErrorType.Error, "maintainer is not set"
 
+        if self._status not in (None, "maintained", "unmaintained", "deprecated"):  # pyright: ignore[reportAny]
+            yield (
+                ErrorType.Error,
+                "_status is not valid, must be 'maintained', 'unmaintained', or 'deprecated'",
+            )
+
     @string_property
     def maintainer(self, value: str | None) -> str:
         assert value is not None
@@ -486,6 +492,18 @@ class APKBUILD:
     @string_property
     def _category(self, value: str | None) -> str | None:
         return value
+
+    @string_property
+    def _readmeurl(self, value: str | None) -> str | None:
+        return value
+
+    @string_property
+    def _donateurl(self, value: str | None) -> str | None:
+        return value
+
+    @string_property
+    def _status(self, value: str | None) -> str:
+        return value or "maintained"
 
     @string_property
     def sonameprefix(self, value: str | None) -> str | None:
