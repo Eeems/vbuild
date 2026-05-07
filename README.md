@@ -74,7 +74,7 @@ Link to readme file for the package. This should return the readme for the speci
 
 Link to page that allows users to donate to the author.
 
-### status
+#### status
 
 Current status of the package. Can be `maintained`, `unmaintained`, or `deprecated`. If excluded it will default to `maintained`.
 

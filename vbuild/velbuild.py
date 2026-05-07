@@ -222,17 +222,17 @@ class VELBUILD(APKBUILD):
                 ) as f:
                     _ = f.write("\n".join([header, src, footer or ""]))
 
-    def _validate_url(self, url: str) -> bool:
+    def _validate_url(self, url: str | None) -> None:
+        if url is None:
+            return
+
         parsed = urlparse(url)
         if parsed.scheme not in ("http", "https"):
             raise ValueError(f"Unsupported URL schema: {parsed.scheme}")
 
-        try:
-            with urlopen(Request(url, method="HEAD")) as res:  # noqa: S310  # pyright: ignore[reportAny]
-                return 200 <= res.status < 300  # pyright: ignore[reportAny]
-
-        except URLError:
-            return False
+        with urlopen(Request(url, method="HEAD"), timeout=10) as res:  # noqa: S310  # pyright: ignore[reportAny]
+            if res.status >= 300:  # pyright: ignore[reportAny]
+                raise ValueError(f"Unexpected response code: {res.status}")  # pyright: ignore[reportAny]
 
     @override
     def validate(self) -> Generator[tuple[ErrorType, str]]:
@@ -242,17 +242,29 @@ class VELBUILD(APKBUILD):
         if self.category is None:  # pyright: ignore[reportAny]
             yield ErrorType.Error, "category is not set"
 
-        if self.readmeurl is not None and not self._validate_url(self.readmeurl):  # pyright: ignore[reportAny]
-            yield ErrorType.Error, "readmeurl is not valid"
+        try:
+            self._validate_url(self.readmeurl)  # pyright: ignore[reportAny]
 
-        if self.donateurl is not None and not self._validate_url(self.donateurl):  # pyright: ignore[reportAny]
-            yield ErrorType.Error, "donateurl is not valid"
+        except Exception as e:
+            yield ErrorType.Error, f"readmeurl is not valid: {e}"
 
-        if self.url is not None and not self._validate_url(self.url):  # pyright: ignore[reportAny]
-            yield ErrorType.Error, "url is not valid"
+        try:
+            self._validate_url(self.donateurl)  # pyright: ignore[reportAny]
 
-        if self.giturl is not None and not self._validate_url(self.giturl):  # pyright: ignore[reportAny]
-            yield ErrorType.Error, "giturl is not valid"
+        except Exception as e:
+            yield ErrorType.Error, f"donateurl is not valid: {e}"
+
+        try:
+            self._validate_url(self.url)  # pyright: ignore[reportAny]
+
+        except Exception as e:
+            yield ErrorType.Error, f"url is not valid: {e}"
+
+        try:
+            self._validate_url(self.giturl)  # pyright: ignore[reportAny]
+
+        except Exception as e:
+            yield ErrorType.Error, f"giturl is not valid: {e}"
 
         if self.status not in (None, "maintained", "unmaintained", "deprecated"):  # pyright: ignore[reportAny]
             yield (
