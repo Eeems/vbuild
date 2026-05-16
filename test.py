@@ -141,11 +141,11 @@ _assert('apkbuild.arch == ["test", "test2"]')
 _assert("apkbuild.text.strip() == \"maintainer='test'\\narch='\\ntest\\ntest2\\n'\"")
 
 # Test VELBUILD image property
-_isinstance("VELBUILD.image", StringProperty)
+_isinstance("VELBUILD.image", property)
 velbuild = VELBUILD({}, {})
 _assert("velbuild.image is None")
 velbuild.image = "my-custom-image:latest"
-_assert('velbuild.image == "my-custom-image:latest"')
+_assert("\"'my-custom-image:latest'\" in velbuild.image", lambda: velbuild.image)
 _raises('setattr(velbuild, "image", 1)', AssertionError)
 
 # Test that image does NOT appear in generated APKBUILD text

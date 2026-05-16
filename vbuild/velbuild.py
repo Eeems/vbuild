@@ -117,9 +117,17 @@ class VELBUILD(APKBUILD):
             if name in INSTALL_FUNCTION_NAMES or name in subpackage_functions:
                 continue
 
-            if name == "build" and self.image is not None:
+            if name == "image":
+                continue
+
+            elif name == "build" and self.image is not None:
                 value = (  # noqa: PLW2901
-                    f'\n{tab}script="$(tr -dc A-Za-z0-9 </dev/urandom | head -c 13).build.sh"\n'
+                    f"\n{tab}set -e\n"
+                    + f"{tab}image() {{{self.image}}}\n"
+                    + f"{tab}image=$(image)\n"
+                    + f"{tab}unset -f image\n"
+                    + f"{tab}set +e\n"
+                    + f'{tab}script="$(tr -dc A-Za-z0-9 </dev/urandom | head -c 13).build.sh"\n'
                     + f"{tab}cat > \"$script\" << 'VBUILD_BUILD_SCRIPT'\n"
                     + "#!/bin/sh\n"
                     + "cd /work\n"
@@ -129,11 +137,12 @@ class VELBUILD(APKBUILD):
                     + (" \\\n".join(f'{tab} {x}="${x}"' for x in APKBUILD_VARIABLES))
                     + " \\\n"
                     + f"{tab}{runtime} run --rm \\\n"
-                    + f"{tab}  -v $VBUILD_WORKDIR:/work \\\n"
+                    + f"{tab}  --volume=$VBUILD_WORKDIR:/work \\\n"
+                    + f"{tab}  --volume=$VBUILD_DISTFILES:/var/cache/distfiles:ro \\\n"
                     + (" \\\n".join(f"{tab}  -e {x}" for x in APKBUILD_VARIABLES))
                     + " \\\n"
                     + f'{tab}  --workdir "$builddir" \\\n'
-                    + f"{tab}  {quoted_string(self.image)} \\\n"  # pyright: ignore[reportAny]
+                    + f"{tab}  $image \\\n"
                     + f"{tab}  sh $(pwd)/$script\n"
                     + f"{tab}_ret=$?\n"
                     + f'{tab}rm -f "$script"\n'
@@ -242,6 +251,9 @@ class VELBUILD(APKBUILD):
 
     @override
     def validate(self) -> Generator[tuple[ErrorType, str]]:
+        if "image" in self.variables and "image" in self.functions:
+            yield ErrorType.Error, "image set as both variable and function"
+
         if self.upstream_author is None:  # pyright: ignore[reportAny]
             yield ErrorType.Error, "upstream_author is not set"
 
@@ -420,9 +432,33 @@ class VELBUILD(APKBUILD):
     def systemdunits(self, value: list[str] | None) -> list[str]:
         return value or []
 
-    @string_property
-    def image(self, value: str | None) -> str | None:
-        return value
+    @property
+    def image(self) -> str | None:
+        value = self.functions.get("image", None)
+        if value is not None:
+            return value
+
+        value = self.variables.get("image", None)
+        assert value is None or isinstance(value, str), f"{value} is not str | None"
+        if value is not None:
+            return f"\n    echo {quoted_string(value)}\n"
+
+        return None
+
+    @image.setter
+    def image(self, value: str | None) -> None:
+        assert value is None or isinstance(value, str)
+        self.variables["image"] = value
+        if "image" in self.functions:
+            del self.functions["image"]
+
+    @image.deleter
+    def image(self) -> None:
+        if "image" in self.variables:
+            del self.variables["image"]
+
+        if "image" in self.functions:
+            del self.functions["image"]
 
     def _getsrc(self, name: str) -> str | None:
         src = self.functions.get(name, None)

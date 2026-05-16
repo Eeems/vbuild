@@ -35,12 +35,6 @@ vbuild/cli/__names__.py: $(OBJ)
 	. ${VENV_BIN_ACTIVATE}; \
 	python -u write_cli_names.py
 
-.PHONY: test
-test: $(IMAGES) $(OBJ)
-	emake requirements
-	. ${VENV_BIN_ACTIVATE}; \
-	python -u test.py
-
 .PHONY: all
 all: release
 
