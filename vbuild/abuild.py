@@ -99,6 +99,7 @@ def abuild(
                 "SOURCE_DATE_EPOCH": os.environ.get("SOURCE_DATE_EPOCH", "0"),
                 "REPODEST": "/dist",
                 "VBUILD_WORKDIR": directory,
+                "VBUILD_DISTFILES": distfiles,
             },
         }
         teardown = []

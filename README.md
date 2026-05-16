@@ -64,7 +64,7 @@ A string array of filenames for systemd units to automatically deploy, enable, s
 
 #### image
 
-Container image to use when running the build function.
+Container image to use when running the build function. This can either be a variable, or a function that will echo the name of the image.
 
 #### readmeurl
 

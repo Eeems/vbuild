@@ -1,6 +1,6 @@
 [project]
 name = "vbuild"
-version = "0.0.25"
+version = "0.0.26"
 authors = [
   { name="Eeems", email="eeems@eeems.email" },
 ]
