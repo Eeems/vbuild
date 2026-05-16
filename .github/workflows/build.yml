@@ -6,7 +6,7 @@ on:
   pull_request:
   workflow_dispatch:
   release:
-    types: [ released ]
+    types: [released]
 permissions: read-all
 jobs:
   lint:
@@ -83,7 +83,7 @@ jobs:
             tries=$(( tries + 1 ))
             sleep 0.1
           done
-          make test
+          emake test
           echo "Stopping podman service..."
           kill $(jobs -p) || true
 

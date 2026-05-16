@@ -439,11 +439,26 @@ class VELBUILD(APKBUILD):
             return value
 
         value = self.variables.get("image", None)
-        assert value is None or isinstance(value, str)
+        assert value is None or isinstance(value, str), f"{value} is not str | None"
         if value is not None:
             return f"\n    echo {quoted_string(value)}\n"
 
         return None
+
+    @image.setter
+    def image(self, value: str | None) -> None:
+        assert value is None or isinstance(value, str)
+        self.variables["image"] = value
+        if "image" in self.functions:
+            del self.functions["image"]
+
+    @image.deleter
+    def image(self) -> None:
+        if "image" in self.variables:
+            del self.variables["image"]
+
+        if "image" in self.functions:
+            del self.functions["image"]
 
     def _getsrc(self, name: str) -> str | None:
         src = self.functions.get(name, None)

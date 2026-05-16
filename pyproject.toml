@@ -85,3 +85,6 @@ ignore = [
 
 [tool.pyright]
 exclude = [".venv", "build"]
+
+[tool.emake]
+test = ["python -u test.py"]
