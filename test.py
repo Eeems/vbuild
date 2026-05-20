@@ -139,16 +139,30 @@ _assert("apkbuild.text.strip() == \"maintainer='test'\\narch='\\ntest\\n'\"")
 apkbuild.arch = ["test", "test2"]
 _assert('apkbuild.arch == ["test", "test2"]')
 _assert("apkbuild.text.strip() == \"maintainer='test'\\narch='\\ntest\\ntest2\\n'\"")
-
-# Test VELBUILD image property
 _isinstance("VELBUILD.image", property)
 velbuild = VELBUILD({}, {})
 _assert("velbuild.image is None")
 velbuild.image = "my-custom-image:latest"
 _assert("\"'my-custom-image:latest'\" in velbuild.image", lambda: velbuild.image)
 _raises('setattr(velbuild, "image", 1)', AssertionError)
-
-# Test that image does NOT appear in generated APKBUILD text
+_assert(
+    'set(velbuild.options) == {"!check", "!fhs", "!strip", "!tracedeps"}',
+    lambda: set(velbuild.options),  # pyright: ignore[reportAny]
+)
+velbuild.variables["options"] = "check"
+_assert(
+    'set(velbuild.options) == {"!fhs", "!strip", "!tracedeps"}',
+    lambda: set(velbuild.options),  # pyright: ignore[reportAny]
+)
+velbuild.variables["options"] += "\nfhs"
+_assert(
+    'set(velbuild.options) == {"!strip", "!tracedeps"}',
+    lambda: set(velbuild.options),  # pyright: ignore[reportAny]
+)
+velbuild.variables["options"] += "\nstrip"
+_assert('set(velbuild.options) == {"!tracedeps"}', lambda: set(velbuild.options))  # pyright: ignore[reportAny]
+velbuild.variables["options"] += "\ntracedeps"
+_assert("not velbuild.options", lambda: set(velbuild.options))  # pyright: ignore[reportAny]
 velbuild.pkgname = "test-pkg"
 velbuild.pkgver = "1.0"
 velbuild.pkgrel = "0"
@@ -156,16 +170,12 @@ os.environ["VBUILD_DRIVER"] = "docker"
 text = velbuild.text
 _assert("'image=' not in text", lambda: text)
 _assert("'my-custom-image' not in text", lambda: text)
-
-# Test that build() function gets wrapped when image is set
 velbuild.functions["build"] = "echo 'building...'"
 os.environ["VBUILD_DRIVER"] = "podman"
 text = velbuild.text
 _assert("'VBUILD_BUILD_SCRIPT' in text", lambda: text)
 _assert("'my-custom-image:latest' in text", lambda: text)
 _assert("'podman' in text and 'run' in text", lambda: text)
-
-# Test that build() function is NOT wrapped when image is not set
 velbuild2 = VELBUILD({}, {})
 velbuild2.pkgname = "test-pkg2"
 velbuild2.pkgver = "1.0"
