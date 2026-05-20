@@ -9,7 +9,6 @@ url="https://github.com/asivery/appload-rmstream"
 arch="aarch64 armv7"
 license="GPL-3.0"
 depends="appload framebuffer-spy"
-options="!check !fhs !strip !tracedeps"
 
 source="
 https://github.com/$upstream_author/appload-rmstream/releases/download/v$pkgver/rmstream-aarch64.zip

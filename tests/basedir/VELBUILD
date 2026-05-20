@@ -10,7 +10,6 @@ url="https://github.com/asivery/rm-hacks-qmd"
 arch="noarch"
 license="MIT"
 depends="qt-resource-rebuilder>=17 remarkable-os>=3.24 remarkable-os<3.25"
-options="!check !fhs"
 source="
 rm-hacks-qmd-$_commit.tar.gz::https://github.com/asivery/rm-hacks-qmd/archive/$_commit.tar.gz
 "

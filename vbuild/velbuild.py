@@ -45,10 +45,6 @@ class VELBUILD(APKBUILD):
     def text(self) -> str:
         lines: list[str] = []
         variables = self.variables.copy()
-
-        if self.systemdunits and (self.options is None or "!fhs" not in self.options):  # pyright: ignore[reportAny]
-            variables["options"] = f"\n{'\n'.join([*(self.options or []), '!fhs'])}\n"
-
         for name, value in variables.items():
             if (
                 value is None
@@ -63,7 +59,7 @@ class VELBUILD(APKBUILD):
             ):
                 continue
 
-            if name in ("systemdunits", "image"):
+            if name in ("systemdunits", "image", "options"):
                 continue
 
             if name in (
@@ -93,6 +89,9 @@ class VELBUILD(APKBUILD):
 
                 lines.append(")")
 
+        lines.append(
+            f"options={quoted_string(f'\n{"\n".join(cast(list[str], self.options))}\n')}"
+        )
         if self.install.strip():  # pyright: ignore[reportAny]
             lines.append(f"install={quoted_string(self.install)}")  # pyright: ignore[reportAny]
 
@@ -444,6 +443,34 @@ class VELBUILD(APKBUILD):
             return f"\n    echo {quoted_string(value)}\n"
 
         return None
+
+    @APKBUILD.options.getter
+    def options(self) -> list[str]:
+        options = list(
+            set(
+                [
+                    *cast(list[str], super().options or []),
+                    *{"!check", "!fhs", "!strip", "!tracedeps"},
+                ]
+            )
+        )
+
+        def handle_option(option: str) -> None:
+            nonlocal options
+            if option not in options:
+                return
+
+            options.remove(option)
+            option = f"!{option}"
+            if option in options:
+                options.remove(option)
+
+        handle_option("check")
+        handle_option("fhs")
+        handle_option("strip")
+        handle_option("tracedeps")
+        options.sort()
+        return options
 
     @image.setter
     def image(self, value: str | None) -> None:

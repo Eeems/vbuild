@@ -9,7 +9,6 @@ url="https://github.com/asivery/rm-xovi-extensions"
 arch="aarch64 armv7"
 license="GPL-3.0"
 depends="xovi remarkable-os>=3.20 remarkable-os<3.26"
-options="!check !fhs !strip !tracedeps"
 
 subpackages="
 	qt-resource-rebuilder:qt_resource_rebuilder
