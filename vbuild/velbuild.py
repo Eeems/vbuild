@@ -246,7 +246,7 @@ class VELBUILD(APKBUILD):
             ),
             timeout=10,
         ) as res:  # pyright: ignore[reportAny]
-            if res.status >= 300:  # pyright: ignore[reportAny]
+            if res.status >= 300 and res.status != 403:  # pyright: ignore[reportAny]
                 raise ValueError(f"Unexpected response code: {res.status}")  # pyright: ignore[reportAny]
 
     @override
