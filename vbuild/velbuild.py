@@ -8,8 +8,9 @@ from typing import (
 )
 from urllib.parse import urlparse
 from urllib.request import (
+    HTTPErrorProcessor,
     Request,
-    urlopen,
+    build_opener,
 )
 
 from . import (
@@ -38,6 +39,10 @@ INSTALL_FUNCTION_NAME_MAP = {
 }
 
 INSTALL_FUNCTION_NAMES = set(INSTALL_FUNCTION_NAME_MAP.keys())
+
+
+class NonRaisingHTTPErrorProcessor(HTTPErrorProcessor):
+    http_response = https_response = lambda self, request, response: response  # pyright: ignore[reportUnannotatedClassAttribute]
 
 
 class VELBUILD(APKBUILD):
@@ -238,7 +243,7 @@ class VELBUILD(APKBUILD):
         if parsed.scheme not in ("http", "https"):
             raise ValueError(f"Unsupported URL schema: {parsed.scheme}")
 
-        with urlopen(  # noqa: S310
+        with build_opener(NonRaisingHTTPErrorProcessor).open(  # noqa: S310
             Request(  # noqa: S310
                 url,
                 method="HEAD",
