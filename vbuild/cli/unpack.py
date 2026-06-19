@@ -16,4 +16,4 @@ def register(_: ArgumentParser) -> None:
 
 
 def command(args: Namespace) -> int:
-    return abuild(cast(str, args.C), "unpack")
+    return abuild(cast(str, args.C), "unpack", verbose=cast(bool, args.v))

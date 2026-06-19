@@ -21,7 +21,7 @@ def register(_: ArgumentParser) -> None:
 
 
 def command(args: Namespace) -> int:
-    ret = abuild(cast(str, args.C), "validate")
+    ret = abuild(cast(str, args.C), "validate", verbose=cast(bool, args.v))
     if ret:
         return ret
 

@@ -83,11 +83,15 @@ def string_property(func: Callable[..., str | None]) -> property:
 
     def fget(self: "APKBUILD") -> str | None:
         value = self.variables.get(name, None)
-        assert value is None or isinstance(value, str)
+        assert value is None or isinstance(value, str), (
+            f"Cannot get {name}, value is not str"
+        )
         return func(self, value)
 
     def fset(self: "APKBUILD", value: str | None) -> None:
-        assert value is None or isinstance(value, str)
+        assert value is None or isinstance(value, str), (
+            f"Cannot set {name}, value is not str"
+        )
         self.variables[name] = value
 
     def fdel(self: "APKBUILD") -> None:
@@ -101,14 +105,16 @@ def string_array_property(func: Callable[..., list[str] | None]) -> property:
 
     def fget(self: "APKBUILD") -> list[str] | None:
         value = self.variables.get(name, None)
-        assert value is None or isinstance(value, str)
+        assert value is None or isinstance(value, str), (
+            f"Cannot get {name}, value is not str"
+        )
         return func(self, None) if value is None else func(self, value.split())
 
     def fset(self: "APKBUILD", value: list[str] | None) -> None:
         assert value is None or (
             isinstance(value, list)
             and (not value or not [x for x in value if not isinstance(x, str)])
-        )
+        ), f"Cannot set {name}, value is not list[str]"
         self.variables[name] = None if value is None else f"\n{'\n'.join(value)}\n"
 
     def fdel(self: "APKBUILD") -> None:
