@@ -227,7 +227,12 @@ class VELBUILD(APKBUILD):
                         and lifecyclename in src
                         and lifecyclename in sub_funcs
                     ):
-                        header += self._lifecycle_header_script(name, lifecyclename)
+                        header += self._lifecycle_header_script(
+                            name,
+                            lifecyclename,
+                            sub_vars.get("pkgver"),
+                            sub_vars.get("pkgrel"),
+                        )
 
                 with open(
                     os.path.join(path, f"{name}.{lifecycle_file}"),
@@ -534,7 +539,13 @@ class VELBUILD(APKBUILD):
         lines.append("fi")
         return "\n".join(lines)
 
-    def _lifecycle_header_script(self, pkgname: str, name: str) -> str:
+    def _lifecycle_header_script(
+        self,
+        pkgname: str,
+        name: str,
+        pkgver: str | None = None,
+        pkgrel: str | None = None,
+    ) -> str:
         tab = " " * 4
         header = f"\n{name}() {{\n"
         if name == "postosupgrade":
@@ -546,10 +557,14 @@ class VELBUILD(APKBUILD):
             lifecycle = INSTALL_FUNCTION_NAME_MAP[name]
             header += (
                 f"{tab}db=/home/root/.vellum/lib/apk/db/scripts.tar.gz;\n"
-                + f"{tab}tar tf $db \\\n"
-                + f"{tab}| grep -E '^{re.escape(pkgname)}-{re.escape(self.pkgver)}-r{re.escape(self.pkgrel)}\\..+\\.{re.escape(lifecycle)}$' \\\n"
-                + f"{tab}| xargs tar xOf $db \\\n"
-                + f"{tab}| SKIP_SYSTEMD_HANDLING=1 bash /dev/stdin"
+                + f'{tab}entry="$(tar tf $db '
+                + f"| grep -E '^{re.escape(pkgname)}-{re.escape(pkgver or self.pkgver)}-r{re.escape(pkgrel or self.pkgrel)}\\..+\\.{re.escape(lifecycle)}$')\";\n"
+                + f'{tab}if [ -z "$entry" ]; then\n'
+                + f'{tab * 2}echo "{name} script missing!" 1>&2;\n'
+                + f"{tab * 2}exit 1;\n"
+                + f"{tab}fi;\n"
+                + f'{tab}tar xOf "$db" "$entry" | \\\n'
+                + f"{tab * 2}SKIP_SYSTEMD_HANDLING=1 bash /dev/stdin"
             )
 
         return header + ' "$@";\n}'
