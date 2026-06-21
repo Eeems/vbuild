@@ -214,6 +214,10 @@ class VELBUILD(APKBUILD):
             systemdunits = [
                 x for x in cast(str, sub_vars.get("systemdunits", "")).split() if x
             ]
+            pkgver = sub_vars.get("pkgver")
+            assert isinstance(pkgver, str | None)
+            pkgrel = sub_vars.get("pkgrel")
+            assert isinstance(pkgrel, str | None)
             for lifecycle_name, lifecycle_file in INSTALL_FUNCTION_NAME_MAP.items():
                 footer = self._getfooter(name, lifecycle_name, systemdunits)
                 if lifecycle_name not in sub_funcs and footer is None:
@@ -228,10 +232,7 @@ class VELBUILD(APKBUILD):
                         and lifecyclename in sub_funcs
                     ):
                         header += self._lifecycle_header_script(
-                            name,
-                            lifecyclename,
-                            sub_vars.get("pkgver"),
-                            sub_vars.get("pkgrel"),
+                            name, lifecyclename, pkgver, pkgrel
                         )
 
                 with open(
