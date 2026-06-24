@@ -27,7 +27,7 @@ def command(args: Namespace) -> int:
     if ret:
         return ret
 
-    ret = abuild(directory, "checksum")
+    ret = abuild(directory, "checksum", verbose=cast(bool, args.v))
     if ret:
         return ret
 

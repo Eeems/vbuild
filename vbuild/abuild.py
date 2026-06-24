@@ -31,6 +31,7 @@ has_pulled = False
 def abuild(
     directory: str,
     action: str = "all",
+    verbose: bool = False,
 ) -> int:
     directory = os.path.abspath(directory)
     distfiles = os.path.join(
@@ -132,7 +133,7 @@ def abuild(
                 "\n".join(
                     [
                         *SETUP_CONTAINER,
-                        f"abuild -C /work -d -F -r {shlex.quote(action)}",
+                        f"abuild -C /work -d -F -r {'-v' if verbose else ''} {shlex.quote(action)}",
                         *teardown,
                     ]
                 ),

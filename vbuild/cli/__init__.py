@@ -37,6 +37,11 @@ def main() -> int:
             default=".",
             metavar="DIR",
         )
+        _ = parser.add_argument(
+            "-v",
+            help="Verbose: show every command as it is run (very noisy)",
+            action="store_true",
+        )
         parser.set_defaults(func=None)
         subparsers = parser.add_subparsers(help="COMMANDS")
         for name in sorted(modules.keys()):

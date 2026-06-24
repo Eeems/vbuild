@@ -8,8 +8,9 @@ from typing import (
 )
 from urllib.parse import urlparse
 from urllib.request import (
+    HTTPErrorProcessor,
     Request,
-    urlopen,
+    build_opener,
 )
 
 from . import (
@@ -38,6 +39,10 @@ INSTALL_FUNCTION_NAME_MAP = {
 }
 
 INSTALL_FUNCTION_NAMES = set(INSTALL_FUNCTION_NAME_MAP.keys())
+
+
+class NonRaisingHTTPErrorProcessor(HTTPErrorProcessor):
+    http_response = https_response = lambda self, request, response: response  # pyright: ignore[reportUnannotatedClassAttribute]
 
 
 class VELBUILD(APKBUILD):
@@ -208,6 +213,10 @@ class VELBUILD(APKBUILD):
             systemdunits = [
                 x for x in cast(str, sub_vars.get("systemdunits", "")).split() if x
             ]
+            pkgver = sub_vars.get("pkgver")
+            assert isinstance(pkgver, str | None)
+            pkgrel = sub_vars.get("pkgrel")
+            assert isinstance(pkgrel, str | None)
             for lifecycle_name, lifecycle_file in INSTALL_FUNCTION_NAME_MAP.items():
                 footer = self._getfooter(name, lifecycle_name, systemdunits)
                 if lifecycle_name not in sub_funcs and footer is None:
@@ -221,7 +230,9 @@ class VELBUILD(APKBUILD):
                         and lifecyclename in src
                         and lifecyclename in sub_funcs
                     ):
-                        header += self._lifecycle_header_script(name, lifecyclename)
+                        header += self._lifecycle_header_script(
+                            name, lifecyclename, pkgver, pkgrel
+                        )
 
                 with open(
                     os.path.join(path, f"{name}.{lifecycle_file}"),
@@ -237,7 +248,7 @@ class VELBUILD(APKBUILD):
         if parsed.scheme not in ("http", "https"):
             raise ValueError(f"Unsupported URL schema: {parsed.scheme}")
 
-        with urlopen(  # noqa: S310
+        with build_opener(NonRaisingHTTPErrorProcessor).open(  # noqa: S310
             Request(  # noqa: S310
                 url,
                 method="HEAD",
@@ -245,7 +256,7 @@ class VELBUILD(APKBUILD):
             ),
             timeout=10,
         ) as res:  # pyright: ignore[reportAny]
-            if res.status >= 300:  # pyright: ignore[reportAny]
+            if res.status >= 300 and res.status != 403:  # pyright: ignore[reportAny]
                 raise ValueError(f"Unexpected response code: {res.status}")  # pyright: ignore[reportAny]
 
     @override
@@ -556,7 +567,13 @@ class VELBUILD(APKBUILD):
         lines.append("fi")
         return "\n".join(lines)
 
-    def _lifecycle_header_script(self, pkgname: str, name: str) -> str:
+    def _lifecycle_header_script(
+        self,
+        pkgname: str,
+        name: str,
+        pkgver: str | None = None,
+        pkgrel: str | None = None,
+    ) -> str:
         tab = " " * 4
         header = f"\n{name}() {{\n"
         if name == "postosupgrade":
@@ -568,10 +585,14 @@ class VELBUILD(APKBUILD):
             lifecycle = INSTALL_FUNCTION_NAME_MAP[name]
             header += (
                 f"{tab}db=/home/root/.vellum/lib/apk/db/scripts.tar.gz;\n"
-                + f"{tab}tar tf $db \\\n"
-                + f"{tab}| grep -E '^{re.escape(pkgname)}-{re.escape(self.pkgver)}-r{re.escape(self.pkgrel)}\\..+\\.{re.escape(lifecycle)}$' \\\n"
-                + f"{tab}| xargs tar xOf $db \\\n"
-                + f"{tab}| SKIP_SYSTEMD_HANDLING=1 bash /dev/stdin"
+                + f'{tab}entry="$(tar tf $db '
+                + f"| grep -E '^{re.escape(pkgname)}-{re.escape(pkgver or self.pkgver)}-r{re.escape(pkgrel or self.pkgrel)}\\..+\\.{re.escape(lifecycle)}$')\";\n"
+                + f'{tab}if [ -z "$entry" ]; then\n'
+                + f'{tab * 2}echo "{name} script missing!" 1>&2;\n'
+                + f"{tab * 2}exit 1;\n"
+                + f"{tab}fi;\n"
+                + f'{tab}tar xOf "$db" "$entry" | \\\n'
+                + f"{tab * 2}SKIP_SYSTEMD_HANDLING=1 bash /dev/stdin"
             )
 
         return header + ' "$@";\n}'
