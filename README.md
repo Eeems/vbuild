@@ -84,10 +84,10 @@ vbuild will generate keys in `~/.config/vbuild` that will be used to sign any pa
 
 ## Building from source
 
-All building is handled with the Makefile. Run `make executable` to create the executable in the `dist/` directory.
+All building is handled with [emake](https://github.com/Eeems/emake). Take a peek at the github workflow to see how it's built.
 
 ### Requirements
 
 - python 3.12-3.13
-- python-venv
+- [emake](https://github.com/Eeems/emake)
 - podman (If building the builder image)
