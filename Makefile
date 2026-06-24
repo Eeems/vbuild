@@ -20,13 +20,6 @@ clean:
 	    umount -ql .venv/mnt; \
 	fi
 	git clean --force -dX
-
-.PHONY: build
-build: executable
-
-.PHONY: release
-release: build
-
 dist:
 	mkdir -p dist
 
@@ -36,7 +29,8 @@ vbuild/cli/__names__.py: $(OBJ)
 	python -u write_cli_names.py
 
 .PHONY: all
-all: release
+all:
+	@echo "Please use https://github.com/Eeems/emake to build this package"
 
 .PHONY: builder
 builder:
