@@ -1,5 +1,5 @@
 import os
-from collections.abc import Generator
+from collections.abc import Callable, Generator
 from inspect import cleandoc
 from typing import (
     cast,
@@ -194,17 +194,12 @@ class VELBUILD(APKBUILD):
                 continue
 
             header = "#!/bin/sh"
-            for lifecyclename in sorted(INSTALL_FUNCTION_NAMES):
-                if (
-                    lifecyclename != name
-                    and lifecyclename in (src or "")
-                    and getattr(self, lifecyclename) is not None
-                ):
-                    header += self._lifecycle_header_script(
-                        self.pkgname,
-                        lifecyclename,
-                        src=getattr(self, lifecyclename),  # pyright: ignore[reportAny]
-                    )
+            for lifecyclename in sorted(
+                self._lifecycle_references(name, src)
+            ):
+                header += self._lifecycle_header_script(
+                    self.pkgname, lifecyclename,
+                )
 
             with open(
                 os.path.join(path, f"{self.pkgname}.{INSTALL_FUNCTION_NAME_MAP[name]}"),
@@ -224,17 +219,16 @@ class VELBUILD(APKBUILD):
 
                 src = cleandoc(sub_funcs.get(lifecycle_name, "")) or ""
                 header = "#!/bin/sh"
-                for lifecyclename in sorted(INSTALL_FUNCTION_NAMES):
-                    if (
-                        lifecyclename != lifecycle_name
-                        and lifecyclename in src
-                        and lifecyclename in sub_funcs
-                    ):
-                        header += self._lifecycle_header_script(
-                            name,
-                            lifecyclename,
-                            src=sub_funcs.get(lifecyclename),
-                        )
+                for lifecyclename in sorted(
+                    self._lifecycle_references(
+                        lifecycle_name, src,
+                        lookup=lambda fn: sub_funcs.get(fn), # noqa: PLW0108
+                    )
+                ):
+                    header += self._lifecycle_header_script(
+                        name, lifecyclename,
+                        src=sub_funcs.get(lifecyclename),
+                    )
 
                 with open(
                     os.path.join(path, f"{name}.{lifecycle_file}"),
@@ -548,6 +542,9 @@ class VELBUILD(APKBUILD):
         src: str | None = None,
     ) -> str:
         tab = " " * 4
+        if src is None:
+            src = getattr(self, name) or ""
+
         header = f"\n{name}() {{\n"
         if name == "postosupgrade":
             header += f"{tab}SKIP_SYSTEMD_HANDLING=1 /home/root/.vellum/hooks/post-os-upgrade/{pkgname}"
@@ -560,6 +557,44 @@ class VELBUILD(APKBUILD):
                     header += f"{tab}{line}\n"
 
         return header + "}"
+
+    def _lifecycle_references(
+        self,
+        name: str,
+        src: str | None = None,
+        lookup: Callable[[str], str | None] | None = None,
+    ) -> set[str]:
+        if lookup is None:
+            lookup = lambda fn: getattr(self, fn) or "" # noqa: E731
+
+        if src is None:
+            src = lookup(name)
+
+        assert isinstance(src, str)
+        referenced: set[str] = set()
+        pending: set[str] = {
+            fn for fn in INSTALL_FUNCTION_NAMES
+            if fn != name and fn in src
+        }
+        while pending:
+            fn = pending.pop()
+            if fn in referenced:
+                continue
+
+            referenced.add(fn)
+            fn_src = lookup(fn)
+            if not fn_src:
+                continue
+
+            for other in INSTALL_FUNCTION_NAMES:
+                if (
+                    other not in (fn, name)
+                    and other not in referenced
+                    and other in fn_src
+                ):
+                    pending.add(other)
+
+        return referenced
 
 
 def parse(path: str) -> VELBUILD:
