@@ -1,6 +1,5 @@
 import os
-import re
-from collections.abc import Generator
+from collections.abc import Callable, Generator
 from inspect import cleandoc
 from typing import (
     cast,
@@ -195,13 +194,12 @@ class VELBUILD(APKBUILD):
                 continue
 
             header = "#!/bin/sh"
-            for lifecyclename in sorted(INSTALL_FUNCTION_NAMES):
-                if (
-                    lifecyclename != name
-                    and lifecyclename in (src or "")
-                    and getattr(self, lifecyclename) is not None
-                ):
-                    header += self._lifecycle_header_script(self.pkgname, lifecyclename)
+            for lifecyclename in sorted(
+                self._lifecycle_references(name, src)
+            ):
+                header += self._lifecycle_header_script(
+                    self.pkgname, lifecyclename,
+                )
 
             with open(
                 os.path.join(path, f"{self.pkgname}.{INSTALL_FUNCTION_NAME_MAP[name]}"),
@@ -214,10 +212,6 @@ class VELBUILD(APKBUILD):
             systemdunits = [
                 x for x in cast(str, sub_vars.get("systemdunits", "")).split() if x
             ]
-            pkgver = sub_vars.get("pkgver")
-            assert isinstance(pkgver, str | None)
-            pkgrel = sub_vars.get("pkgrel")
-            assert isinstance(pkgrel, str | None)
             for lifecycle_name, lifecycle_file in INSTALL_FUNCTION_NAME_MAP.items():
                 footer = self._getfooter(name, lifecycle_name, systemdunits)
                 if lifecycle_name not in sub_funcs and footer is None:
@@ -225,15 +219,16 @@ class VELBUILD(APKBUILD):
 
                 src = cleandoc(sub_funcs.get(lifecycle_name, "")) or ""
                 header = "#!/bin/sh"
-                for lifecyclename in sorted(INSTALL_FUNCTION_NAMES):
-                    if (
-                        lifecyclename != lifecycle_name
-                        and lifecyclename in src
-                        and lifecyclename in sub_funcs
-                    ):
-                        header += self._lifecycle_header_script(
-                            name, lifecyclename, pkgver, pkgrel
-                        )
+                for lifecyclename in sorted(
+                    self._lifecycle_references(
+                        lifecycle_name, src,
+                        lookup=lambda fn: sub_funcs.get(fn), # noqa: PLW0108
+                    )
+                ):
+                    header += self._lifecycle_header_script(
+                        name, lifecyclename,
+                        src=sub_funcs.get(lifecyclename),
+                    )
 
                 with open(
                     os.path.join(path, f"{name}.{lifecycle_file}"),
@@ -544,31 +539,62 @@ class VELBUILD(APKBUILD):
         self,
         pkgname: str,
         name: str,
-        pkgver: str | None = None,
-        pkgrel: str | None = None,
+        src: str | None = None,
     ) -> str:
         tab = " " * 4
+        if src is None:
+            src = getattr(self, name) or ""
+
         header = f"\n{name}() {{\n"
         if name == "postosupgrade":
             header += f"{tab}SKIP_SYSTEMD_HANDLING=1 /home/root/.vellum/hooks/post-os-upgrade/{pkgname}"
+            header += ' "$@";\n'
 
-        else:
-            assert isinstance(self.pkgver, str)  # pyright: ignore[reportAny]
-            assert isinstance(self.pkgrel, str)  # pyright: ignore[reportAny]
-            lifecycle = INSTALL_FUNCTION_NAME_MAP[name]
-            header += (
-                f"{tab}db=/home/root/.vellum/lib/apk/db/scripts.tar.gz;\n"
-                + f'{tab}entry="$(tar tf $db '
-                + f"| grep -E '^{re.escape(pkgname)}-{re.escape(pkgver or self.pkgver)}-r{re.escape(pkgrel or self.pkgrel)}\\..+\\.{re.escape(lifecycle)}$')\";\n"
-                + f'{tab}if [ -z "$entry" ]; then\n'
-                + f'{tab * 2}echo "{name} script missing!" 1>&2;\n'
-                + f"{tab * 2}exit 1;\n"
-                + f"{tab}fi;\n"
-                + f'{tab}tar xOf "$db" "$entry" | \\\n'
-                + f"{tab * 2}SKIP_SYSTEMD_HANDLING=1 bash /dev/stdin"
-            )
+        elif src:
+            body = cleandoc(src)
+            if body:
+                for line in body.split("\n"):
+                    header += f"{tab}{line}\n"
 
-        return header + ' "$@";\n}'
+        return header + "}"
+
+    def _lifecycle_references(
+        self,
+        name: str,
+        src: str | None = None,
+        lookup: Callable[[str], str | None] | None = None,
+    ) -> set[str]:
+        if lookup is None:
+            lookup = lambda fn: getattr(self, fn) or "" # noqa: E731
+
+        if src is None:
+            src = lookup(name)
+
+        assert isinstance(src, str)
+        referenced: set[str] = set()
+        pending: set[str] = {
+            fn for fn in INSTALL_FUNCTION_NAMES
+            if fn != name and fn in src
+        }
+        while pending:
+            fn = pending.pop()
+            if fn in referenced:
+                continue
+
+            referenced.add(fn)
+            fn_src = lookup(fn)
+            if not fn_src:
+                continue
+
+            for other in INSTALL_FUNCTION_NAMES:
+                if (
+                    other not in (fn, name)
+                    and other not in referenced
+                    and other in fn_src
+                ):
+                    pending.add(other)
+
+        return referenced
 
 
 def parse(path: str) -> VELBUILD:
