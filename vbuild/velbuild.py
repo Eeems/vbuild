@@ -557,11 +557,16 @@ class VELBUILD(APKBUILD):
             assert isinstance(self.pkgrel, str)  # pyright: ignore[reportAny]
             lifecycle = INSTALL_FUNCTION_NAME_MAP[name]
             header += (
-                f"{tab}db=/home/root/.vellum/lib/apk/db/scripts.tar.gz;\n"
+                f"{tab}script=/home/root/.vellum/lib/apk/exec/{pkgname}-{pkgver or self.pkgver}-r{pkgrel or self.pkgrel}.{lifecycle};\n"
+                + f'{tab}if [ -f "$script" ]; then\n'
+                + f'{tab * 2}SKIP_SYSTEMD_HANDLING=1 bash "$script" "$@";\n'
+                + f"{tab * 2}return;\n"
+                + f"{tab}fi;\n"
+                + f"{tab}db=/home/root/.vellum/lib/apk/db/scripts.tar.gz;\n"
                 + f'{tab}entry="$(tar tf $db '
                 + f"| grep -E '^{re.escape(pkgname)}-{re.escape(pkgver or self.pkgver)}-r{re.escape(pkgrel or self.pkgrel)}\\..+\\.{re.escape(lifecycle)}$')\";\n"
                 + f'{tab}if [ -z "$entry" ]; then\n'
-                + f'{tab * 2}echo "{name} script missing!" 1>&2;\n'
+                + f'{tab * 2}echo "{name} script missing!";\n'
                 + f"{tab * 2}exit 1;\n"
                 + f"{tab}fi;\n"
                 + f'{tab}tar xOf "$db" "$entry" | \\\n'
