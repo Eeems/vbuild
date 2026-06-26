@@ -1,5 +1,4 @@
 import os
-import re
 from collections.abc import Generator
 from inspect import cleandoc
 from typing import (
@@ -201,7 +200,11 @@ class VELBUILD(APKBUILD):
                     and lifecyclename in (src or "")
                     and getattr(self, lifecyclename) is not None
                 ):
-                    header += self._lifecycle_header_script(self.pkgname, lifecyclename)
+                    header += self._lifecycle_header_script(
+                        self.pkgname,
+                        lifecyclename,
+                        src=getattr(self, lifecyclename),  # pyright: ignore[reportAny]
+                    )
 
             with open(
                 os.path.join(path, f"{self.pkgname}.{INSTALL_FUNCTION_NAME_MAP[name]}"),
@@ -214,10 +217,6 @@ class VELBUILD(APKBUILD):
             systemdunits = [
                 x for x in cast(str, sub_vars.get("systemdunits", "")).split() if x
             ]
-            pkgver = sub_vars.get("pkgver")
-            assert isinstance(pkgver, str | None)
-            pkgrel = sub_vars.get("pkgrel")
-            assert isinstance(pkgrel, str | None)
             for lifecycle_name, lifecycle_file in INSTALL_FUNCTION_NAME_MAP.items():
                 footer = self._getfooter(name, lifecycle_name, systemdunits)
                 if lifecycle_name not in sub_funcs and footer is None:
@@ -232,7 +231,9 @@ class VELBUILD(APKBUILD):
                         and lifecyclename in sub_funcs
                     ):
                         header += self._lifecycle_header_script(
-                            name, lifecyclename, pkgver, pkgrel
+                            name,
+                            lifecyclename,
+                            src=sub_funcs.get(lifecyclename),
                         )
 
                 with open(
@@ -544,36 +545,21 @@ class VELBUILD(APKBUILD):
         self,
         pkgname: str,
         name: str,
-        pkgver: str | None = None,
-        pkgrel: str | None = None,
+        src: str | None = None,
     ) -> str:
         tab = " " * 4
         header = f"\n{name}() {{\n"
         if name == "postosupgrade":
             header += f"{tab}SKIP_SYSTEMD_HANDLING=1 /home/root/.vellum/hooks/post-os-upgrade/{pkgname}"
+            header += ' "$@";\n'
 
-        else:
-            assert isinstance(self.pkgver, str)  # pyright: ignore[reportAny]
-            assert isinstance(self.pkgrel, str)  # pyright: ignore[reportAny]
-            lifecycle = INSTALL_FUNCTION_NAME_MAP[name]
-            header += (
-                f"{tab}script=/home/root/.vellum/lib/apk/exec/{pkgname}-{pkgver or self.pkgver}-r{pkgrel or self.pkgrel}.{lifecycle};\n"
-                + f'{tab}if [ -f "$script" ]; then\n'
-                + f'{tab * 2}SKIP_SYSTEMD_HANDLING=1 bash "$script" "$@";\n'
-                + f"{tab * 2}return;\n"
-                + f"{tab}fi;\n"
-                + f"{tab}db=/home/root/.vellum/lib/apk/db/scripts.tar.gz;\n"
-                + f'{tab}entry="$(tar tf $db '
-                + f"| grep -E '^{re.escape(pkgname)}-{re.escape(pkgver or self.pkgver)}-r{re.escape(pkgrel or self.pkgrel)}\\..+\\.{re.escape(lifecycle)}$')\";\n"
-                + f'{tab}if [ -z "$entry" ]; then\n'
-                + f'{tab * 2}echo "{name} script missing!";\n'
-                + f"{tab * 2}exit 1;\n"
-                + f"{tab}fi;\n"
-                + f'{tab}tar xOf "$db" "$entry" | \\\n'
-                + f"{tab * 2}SKIP_SYSTEMD_HANDLING=1 bash /dev/stdin"
-            )
+        elif src:
+            body = cleandoc(src)
+            if body:
+                for line in body.split("\n"):
+                    header += f"{tab}{line}\n"
 
-        return header + ' "$@";\n}'
+        return header + "}"
 
 
 def parse(path: str) -> VELBUILD:
