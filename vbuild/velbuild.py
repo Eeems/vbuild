@@ -545,7 +545,7 @@ class VELBUILD(APKBUILD):
         if src is None:
             src = getattr(self, name) or ""
 
-        header = f"\n{name}() {{\n"
+        header = f"\n{name}() {{\n{tab}_SKIP_SYSTEMD_HANDLING=${{SKIP_SYSTEMD_HANDLING:-0}}\n{tab}export SKIP_SYSTEMD_HANDLING=1\n"
         if name == "postosupgrade":
             header += f"{tab}SKIP_SYSTEMD_HANDLING=1 /home/root/.vellum/hooks/post-os-upgrade/{pkgname}"
             header += ' "$@";\n'
@@ -556,7 +556,7 @@ class VELBUILD(APKBUILD):
                 for line in body.split("\n"):
                     header += f"{tab}{line}\n"
 
-        return header + "}"
+        return header + f"{tab}export SKIP_SYSTEMD_HANDLING=$_SKIP_SYSTEMD_HANDLING;\n}}"
 
     def _lifecycle_references(
         self,
