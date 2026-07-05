@@ -49,10 +49,6 @@ class VELBUILD(APKBUILD):
     def text(self) -> str:
         lines: list[str] = []
         variables = self.variables.copy()
-
-        if self.systemdunits and (self.options is None or "!fhs" not in self.options):  # pyright: ignore[reportAny]
-            variables["options"] = f"\n{'\n'.join([*(self.options or []), '!fhs'])}\n"
-
         for name, value in variables.items():
             if (
                 value is None
@@ -67,7 +63,7 @@ class VELBUILD(APKBUILD):
             ):
                 continue
 
-            if name in ("systemdunits", "image"):
+            if name in ("systemdunits", "image", "options"):
                 continue
 
             if name in (
@@ -97,6 +93,9 @@ class VELBUILD(APKBUILD):
 
                 lines.append(")")
 
+        lines.append(
+            f"options={quoted_string(f'\n{"\n".join(cast(list[str], self.options))}\n')}"
+        )
         if self.install.strip():  # pyright: ignore[reportAny]
             lines.append(f"install={quoted_string(self.install)}")  # pyright: ignore[reportAny]
 
@@ -194,11 +193,10 @@ class VELBUILD(APKBUILD):
                 continue
 
             header = "#!/bin/sh"
-            for lifecyclename in sorted(
-                self._lifecycle_references(name, src)
-            ):
+            for lifecyclename in sorted(self._lifecycle_references(name, src)):
                 header += self._lifecycle_header_script(
-                    self.pkgname, lifecyclename,
+                    self.pkgname,
+                    lifecyclename,
                 )
 
             with open(
@@ -221,12 +219,14 @@ class VELBUILD(APKBUILD):
                 header = "#!/bin/sh"
                 for lifecyclename in sorted(
                     self._lifecycle_references(
-                        lifecycle_name, src,
-                        lookup=lambda fn: sub_funcs.get(fn), # noqa: PLW0108
+                        lifecycle_name,
+                        src,
+                        lookup=lambda fn, s=sub_funcs: s.get(fn),
                     )
                 ):
                     header += self._lifecycle_header_script(
-                        name, lifecyclename,
+                        name,
+                        lifecyclename,
                         src=sub_funcs.get(lifecyclename),
                     )
 
@@ -451,6 +451,34 @@ class VELBUILD(APKBUILD):
 
         return None
 
+    @APKBUILD.options.getter
+    def options(self) -> list[str]:
+        options = list(
+            set(
+                [
+                    *cast(list[str], super().options or []),
+                    *{"!check", "!fhs", "!strip", "!tracedeps"},
+                ]
+            )
+        )
+
+        def handle_option(option: str) -> None:
+            nonlocal options
+            if option not in options:
+                return
+
+            options.remove(option)
+            option = f"!{option}"
+            if option in options:
+                options.remove(option)
+
+        handle_option("check")
+        handle_option("fhs")
+        handle_option("strip")
+        handle_option("tracedeps")
+        options.sort()
+        return options
+
     @image.setter
     def image(self, value: str | None) -> None:
         assert value is None or isinstance(value, str)
@@ -556,7 +584,9 @@ class VELBUILD(APKBUILD):
                 for line in body.split("\n"):
                     header += f"{tab}{line}\n"
 
-        return header + f"{tab}export SKIP_SYSTEMD_HANDLING=$_SKIP_SYSTEMD_HANDLING;\n}}"
+        return (
+            header + f"{tab}export SKIP_SYSTEMD_HANDLING=$_SKIP_SYSTEMD_HANDLING;\n}}"
+        )
 
     def _lifecycle_references(
         self,
@@ -565,7 +595,7 @@ class VELBUILD(APKBUILD):
         lookup: Callable[[str], str | None] | None = None,
     ) -> set[str]:
         if lookup is None:
-            lookup = lambda fn: getattr(self, fn) or "" # noqa: E731
+            lookup = lambda fn: getattr(self, fn) or ""  # noqa: E731
 
         if src is None:
             src = lookup(name)
@@ -573,8 +603,7 @@ class VELBUILD(APKBUILD):
         assert isinstance(src, str)
         referenced: set[str] = set()
         pending: set[str] = {
-            fn for fn in INSTALL_FUNCTION_NAMES
-            if fn != name and fn in src
+            fn for fn in INSTALL_FUNCTION_NAMES if fn != name and fn in src
         }
         while pending:
             fn = pending.pop()

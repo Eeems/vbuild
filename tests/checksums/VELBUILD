@@ -14,7 +14,6 @@ source="
 floating.qmd::https://raw.githubusercontent.com/FouzR/xovi-extensions/$_commit/3.25/floating.qmd
 LICENSE::https://raw.githubusercontent.com/FouzR/xovi-extensions/$_commit/LICENSE
 "
-options="!check !fhs"
 
 package() {
 	install -Dm644 "$srcdir/floating.qmd" \
