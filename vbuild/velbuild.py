@@ -71,6 +71,7 @@ class VELBUILD(APKBUILD):
                 "category",
                 "readmeurl",
                 "donateurl",
+                "changelogurl",
                 "status",
             ):
                 name = f"_{name}"  # noqa: PLW2901
@@ -279,6 +280,12 @@ class VELBUILD(APKBUILD):
             yield ErrorType.Error, f"donateurl is not valid: {e}"
 
         try:
+            self._validate_url(self.changelogurl)  # pyright: ignore[reportAny]
+
+        except Exception as e:
+            yield ErrorType.Error, f"changelogurl is not valid: {e}"
+
+        try:
             self._validate_url(self.url)  # pyright: ignore[reportAny]
 
         except Exception as e:
@@ -424,6 +431,10 @@ class VELBUILD(APKBUILD):
 
     @string_property
     def donateurl(self, value: str | None) -> str | None:
+        return value
+
+    @string_property
+    def changelogurl(self, value: str | None) -> str | None:
         return value
 
     @string_property

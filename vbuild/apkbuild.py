@@ -508,6 +508,10 @@ class APKBUILD:
         return value
 
     @string_property
+    def _changelogurl(self, value: str | None) -> str | None:
+        return value
+
+    @string_property
     def _status(self, value: str | None) -> str:
         return value or "maintained"
 
