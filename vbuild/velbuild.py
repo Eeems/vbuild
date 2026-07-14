@@ -5,6 +5,7 @@ from typing import (
     cast,
     override,
 )
+from urllib.error import URLError
 from urllib.parse import urlparse
 from urllib.request import (
     HTTPErrorProcessor,
@@ -42,6 +43,10 @@ INSTALL_FUNCTION_NAMES = set(INSTALL_FUNCTION_NAME_MAP.keys())
 
 class NonRaisingHTTPErrorProcessor(HTTPErrorProcessor):
     http_response = https_response = lambda self, request, response: response  # pyright: ignore[reportUnannotatedClassAttribute]
+
+
+class URLValidationError(Exception):
+    pass
 
 
 class VELBUILD(APKBUILD):
@@ -243,7 +248,7 @@ class VELBUILD(APKBUILD):
 
         parsed = urlparse(url)
         if parsed.scheme not in ("http", "https"):
-            raise ValueError(f"Unsupported URL schema: {parsed.scheme}")
+            raise URLValidationError(f"Unsupported URL schema: {parsed.scheme}")
 
         with build_opener(NonRaisingHTTPErrorProcessor).open(  # noqa: S310
             Request(  # noqa: S310
@@ -254,7 +259,7 @@ class VELBUILD(APKBUILD):
             timeout=10,
         ) as res:  # pyright: ignore[reportAny]
             if res.status >= 300 and res.status != 403:  # pyright: ignore[reportAny]
-                raise ValueError(f"Unexpected response code: {res.status}")  # pyright: ignore[reportAny]
+                raise URLValidationError(f"Unexpected response code: {res.status}")  # pyright: ignore[reportAny]
 
     @override
     def validate(self) -> Generator[tuple[ErrorType, str]]:
@@ -282,7 +287,7 @@ class VELBUILD(APKBUILD):
         try:
             self._validate_url(self.changelogurl)  # pyright: ignore[reportAny]
 
-        except Exception as e:
+        except (URLValidationError, URLError) as e:
             yield ErrorType.Error, f"changelogurl is not valid: {e}"
 
         try:
