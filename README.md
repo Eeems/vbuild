@@ -74,6 +74,10 @@ Link to readme file for the package. This should return the readme for the speci
 
 Link to page that allows users to donate to the author.
 
+#### changelogurl
+
+Link to page that has a changelog for the package. This should link to a file that does not change, newer releases of the package should point at the newer static changelog files.
+
 #### status
 
 Current status of the package. Can be `maintained`, `unmaintained`, or `deprecated`. If excluded it will default to `maintained`.
