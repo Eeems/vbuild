@@ -253,9 +253,7 @@ class APKBUILD:
             if not isinstance(prop, property) or prop.fset is None or prop.fget is None:
                 continue
 
-            if isinstance(prop, StringProperty) or isinstance(
-                prop, StringArrayProperty
-            ):
+            if isinstance(prop, (StringProperty, StringArrayProperty)):
                 prop.fset(self, prop.fget(self))
 
     @property

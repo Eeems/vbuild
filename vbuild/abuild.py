@@ -57,7 +57,7 @@ def abuild(
     lines: list[str] = [f"PACKAGER_PRIVKEY=/root/.abuild/{KEY_NAME}.rsa\n"]
     if os.path.exists(conf_path):
         with open(conf_path) as f:
-            for line in f.readlines():
+            for line in f:
                 if not line.startswith("PACKAGER_PRIVKEY="):
                     lines.append(line)
 

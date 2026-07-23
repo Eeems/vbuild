@@ -250,7 +250,7 @@ class VELBUILD(APKBUILD):
         if parsed.scheme not in ("http", "https"):
             raise URLValidationError(f"Unsupported URL schema: {parsed.scheme}")
 
-        with build_opener(NonRaisingHTTPErrorProcessor).open(  # noqa: S310
+        with build_opener(NonRaisingHTTPErrorProcessor).open(
             Request(  # noqa: S310
                 url,
                 method="HEAD",
