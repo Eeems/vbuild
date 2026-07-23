@@ -598,7 +598,7 @@ class VELBUILD(APKBUILD):
             body = cleandoc(src)
             if body:
                 for line in body.split("\n"):
-                    header += f"{tab}{line}\n"
+                    header += f"{line}\n"
 
         return (
             header + f"{tab}export SKIP_SYSTEMD_HANDLING=$_SKIP_SYSTEMD_HANDLING;\n}}"
