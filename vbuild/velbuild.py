@@ -63,7 +63,7 @@ class VELBUILD(APKBUILD):
                 continue
 
             if (
-                name in APKBUILD_AUTOMATIC_VARIABLES.keys()
+                name in APKBUILD_AUTOMATIC_VARIABLES
                 and value == APKBUILD_AUTOMATIC_VARIABLES[name]
             ):
                 continue
@@ -167,7 +167,7 @@ class VELBUILD(APKBUILD):
                     fn_name = INSTALL_FUNCTION_NAME_MAP["postosupgrade"]
                     value += f'{tab}install -Dm755 "$startdir"/"$pkgname".{fn_name} '  # noqa: PLW2901
                     value += (  # noqa: PLW2901
-                        '"$pkgdir"/home/root/.vellum/hooks/post-os-upgrade/"$pkgname";\n'  # noqa: PLW2901
+                        '"$pkgdir"/home/root/.vellum/hooks/post-os-upgrade/"$pkgname";\n'
                     )
 
                 for unit in self.systemdunits:  # pyright: ignore[reportAny]
@@ -191,7 +191,7 @@ class VELBUILD(APKBUILD):
         with open(os.path.join(path, "APKBUILD"), "w") as f:
             _ = f.write(self.text + "\n")
 
-        for name, _ in INSTALL_FUNCTION_NAME_MAP.items():
+        for name, functionName in INSTALL_FUNCTION_NAME_MAP.items():
             src = getattr(self, name)  # pyright: ignore[reportAny]
 
             footer = self._getfooter(self.pkgname, name, self.systemdunits)  # pyright: ignore[reportAny]
@@ -206,7 +206,7 @@ class VELBUILD(APKBUILD):
                 )
 
             with open(
-                os.path.join(path, f"{self.pkgname}.{INSTALL_FUNCTION_NAME_MAP[name]}"),
+                os.path.join(path, f"{self.pkgname}.{functionName}"),
                 "w",
             ) as f:
                 _ = f.write("\n".join([header, src or "", footer or ""]))
@@ -344,7 +344,7 @@ class VELBUILD(APKBUILD):
                 expected_vars["install"] = ""
 
             subpackages[name] = ""
-            for var_name in expected_vars.keys():
+            for var_name in expected_vars:
                 if (
                     var_name in bash.DEFAULT_VARIABLE_NAMES
                     or var_name in APKBUILD_AUTOMATIC_VARIABLES
@@ -470,12 +470,10 @@ class VELBUILD(APKBUILD):
     @APKBUILD.options.getter
     def options(self) -> list[str]:
         options = list(
-            set(
-                [
-                    *cast(list[str], super().options or []),
-                    *{"!check", "!fhs", "!strip", "!tracedeps"},
-                ]
-            )
+            {
+                *cast(list[str], super().options or []),
+                *{"!check", "!fhs", "!strip", "!tracedeps"},
+            }
         )
 
         def handle_option(option: str) -> None:
@@ -611,7 +609,7 @@ class VELBUILD(APKBUILD):
         lookup: Callable[[str], str | None] | None = None,
     ) -> set[str]:
         if lookup is None:
-            lookup = lambda fn: getattr(self, fn) or ""  # noqa: E731
+            lookup = lambda fn: getattr(self, fn) or ""
 
         if src is None:
             src = lookup(name)

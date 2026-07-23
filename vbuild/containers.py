@@ -86,7 +86,7 @@ def from_env() -> Generator[podman.PodmanClient, None, None]:
         raise ExceptionGroup("Unable to connect to docker or podman", errors)
 
 
-def runtime() -> Literal["podman"] | Literal["docker"] | None:
+def runtime() -> Literal["podman", "docker"] | None:
     with from_env() as client:
         if isinstance(client, podman.PodmanClient):  # pyright: ignore[reportUnnecessaryIsInstance]
             return "podman"

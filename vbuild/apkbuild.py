@@ -194,7 +194,7 @@ def quoted_string(value: str) -> str:
                     f"Unexpected token: '{next_token}'. Expecting '}}'", value, 1
                 )
 
-        if name not in APKBUILD_AUTOMATIC_VARIABLES.keys():
+        if name not in APKBUILD_AUTOMATIC_VARIABLES:
             if not in_quote:
                 in_quote = True
                 quoted_value += "'"
@@ -248,7 +248,7 @@ class APKBUILD:
     def __init__(self, variables: bash.Variables, functions: bash.Functions) -> None:
         self.variables: bash.Variables = variables
         self.functions: bash.Functions = functions
-        for name in variables.keys():
+        for name in variables:
             prop = getattr(APKBUILD, name, None)
             if not isinstance(prop, property) or prop.fset is None or prop.fget is None:
                 continue
@@ -267,7 +267,7 @@ class APKBUILD:
                 continue
 
             if (
-                name in APKBUILD_AUTOMATIC_VARIABLES.keys()
+                name in APKBUILD_AUTOMATIC_VARIABLES
                 and value == APKBUILD_AUTOMATIC_VARIABLES[name]
             ):
                 continue
