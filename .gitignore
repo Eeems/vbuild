@@ -176,6 +176,7 @@ tests/**/*.post-upgrade
 tests/**/*.pre-deinstall
 tests/**/*.post-deinstall
 tests/**/*.post-os-upgrade
+tests/**/*.trigger
 tests/**/pkg/
 tests/**/src/
 tests/**/dist/

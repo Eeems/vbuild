@@ -176,13 +176,13 @@ text = velbuild.text
 _assert("'VBUILD_BUILD_SCRIPT' in text", lambda: text)
 _assert("'my-custom-image:latest' in text", lambda: text)
 _assert("'podman' in text and 'run' in text", lambda: text)
-velbuild2 = VELBUILD({}, {})
-velbuild2.pkgname = "test-pkg2"
-velbuild2.pkgver = "1.0"
-velbuild2.pkgrel = "0"
-velbuild2.functions["build"] = "echo 'building...'"
-text2 = velbuild2.text
-_assert("'VBUILD_BUILD_SCRIPT' not in text2", lambda: text2)
+velbuild = VELBUILD({}, {})
+velbuild.pkgname = "test-pkg"
+velbuild.pkgver = "1.0"
+velbuild.pkgrel = "0"
+velbuild.functions["build"] = "echo 'building...'"
+text = velbuild.text
+_assert("'VBUILD_BUILD_SCRIPT' not in text", lambda: text)
 
 if FAILED:
     sys.exit(1)

@@ -58,7 +58,7 @@ class VELBUILD(APKBUILD):
             if (
                 value is None
                 or name in bash.DEFAULT_VARIABLE_NAMES
-                or name == "sha512sums"
+                or name in ("sha512sums", "triggers")
             ):
                 continue
 
@@ -105,6 +105,10 @@ class VELBUILD(APKBUILD):
         if self.install.strip():  # pyright: ignore[reportAny]
             lines.append(f"install={quoted_string(self.install)}")  # pyright: ignore[reportAny]
 
+        if self.triggers:  # pyright: ignore[reportAny]
+            paths = ":".join(self.triggers)  # pyright: ignore[reportAny]
+            lines.append(f"triggers={quoted_string(f'$pkgname.trigger={paths}')}")
+
         tab = " " * 4
         subpackage_map = self._subpackages
         subpackage_functions = subpackage_map.values()
@@ -123,7 +127,11 @@ class VELBUILD(APKBUILD):
 
         tab = " " * 4
         for name, value in functions.items():
-            if name in INSTALL_FUNCTION_NAMES or name in subpackage_functions:
+            if (
+                name in INSTALL_FUNCTION_NAMES
+                or name in subpackage_functions
+                or name == "trigger"
+            ):
                 continue
 
             if name == "image":
@@ -211,6 +219,13 @@ class VELBUILD(APKBUILD):
             ) as f:
                 _ = f.write("\n".join([header, src or "", footer or ""]))
 
+        if self.trigger is not None:
+            with open(
+                os.path.join(path, f"{self.pkgname}.trigger"),
+                "w",
+            ) as f:
+                _ = f.write("#!/bin/sh\n" + self.trigger)
+
         for name, body in super().subpackages.items():
             sub_vars, sub_funcs = bash.parse(body, APKBUILD_AUTOMATIC_VARIABLES)
             systemdunits = [
@@ -242,6 +257,13 @@ class VELBUILD(APKBUILD):
                 ) as f:
                     _ = f.write("\n".join([header, src, footer or ""]))
 
+            if "trigger" in sub_funcs:
+                with open(
+                    os.path.join(path, f"{name}.trigger"),
+                    "w",
+                ) as f:
+                    _ = f.write("#!/bin/sh\n" + cleandoc(sub_funcs["trigger"]))
+
     def _validate_url(self, url: str | None) -> None:
         if url is None:
             return
@@ -265,6 +287,9 @@ class VELBUILD(APKBUILD):
     def validate(self) -> Generator[tuple[ErrorType, str]]:
         if "image" in self.variables and "image" in self.functions:
             yield ErrorType.Error, "image set as both variable and function"
+
+        if "package" not in self.functions:
+            yield ErrorType.Error, "package function is not defined"
 
         if self.upstream_author is None:  # pyright: ignore[reportAny]
             yield ErrorType.Error, "upstream_author is not set"
@@ -315,6 +340,37 @@ class VELBUILD(APKBUILD):
         if self.sha256sums is not None:  # pyright: ignore[reportAny]
             yield ErrorType.Error, "sha256sums is not supported by vbuild"
 
+        if self.trigger is not None and self.triggers is None:  # pyright: ignore[reportAny]
+            yield (
+                ErrorType.Error,
+                "trigger function defined but triggers variable not set",
+            )
+        elif self.trigger is None and self.triggers is not None:  # pyright: ignore[reportAny]
+            yield (
+                ErrorType.Error,
+                "triggers variable set but trigger function not defined",
+            )
+
+        for name, body in super().subpackages.items():
+            sub_vars, sub_funcs = bash.parse(body, APKBUILD_AUTOMATIC_VARIABLES)
+            if "package" not in sub_funcs:
+                yield (
+                    ErrorType.Error,
+                    f"subpackage {name}: package function is not defined",
+                )
+
+            if "trigger" in sub_funcs and sub_vars.get("triggers") is None:
+                yield (
+                    ErrorType.Error,
+                    f"subpackage {name}: trigger function defined but triggers variable not set",
+                )
+
+            elif "trigger" not in sub_funcs and sub_vars.get("triggers") is not None:
+                yield (
+                    ErrorType.Error,
+                    f"subpackage {name}: triggers variable set but trigger function not defined",
+                )
+
     @APKBUILD.subpackages.getter
     def subpackages(self) -> dict[str, str]:
         subpackages = super().subpackages
@@ -344,10 +400,18 @@ class VELBUILD(APKBUILD):
                 expected_vars["install"] = ""
 
             subpackages[name] = ""
+            triggers = expected_vars.get("triggers")
+            if triggers is not None and "trigger" in sub_funcs:
+                paths = ":".join(x for x in cast(str, triggers).split() if x)
+                subpackages[name] += (
+                    f"\n{tab}triggers={quoted_string(f'{name}.trigger={paths}')};"
+                )
+
             for var_name in expected_vars:
                 if (
                     var_name in bash.DEFAULT_VARIABLE_NAMES
                     or var_name in APKBUILD_AUTOMATIC_VARIABLES
+                    or var_name == "triggers"
                 ):
                     continue
 
@@ -425,6 +489,10 @@ class VELBUILD(APKBUILD):
     @property
     def postosupgrade(self) -> str | None:
         return self._getsrc("postosupgrade")
+
+    @property
+    def trigger(self) -> str | None:
+        return self._getsrc("trigger")
 
     @string_property
     def category(self, value: str | None) -> str | None:
