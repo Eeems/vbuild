@@ -105,13 +105,25 @@ class VELBUILD(APKBUILD):
         if self.install.strip():  # pyright: ignore[reportAny]
             lines.append(f"install={quoted_string(self.install)}")  # pyright: ignore[reportAny]
 
+        triggers: list[str] = []
         if self.triggers:  # pyright: ignore[reportAny]
-            paths = ":".join(self.triggers)  # pyright: ignore[reportAny]
-            lines.append(f"triggers={quoted_string(f'$pkgname.trigger={paths}')}")
+            triggers.append(f"{self.pkgname}.trigger={':'.join(self.triggers)}")  # pyright: ignore[reportAny]
 
-        tab = " " * 4
         subpackage_map = self._subpackages
-        subpackage_functions = subpackage_map.values()
+        for sub_name, sub_func_name in subpackage_map.items():
+            sub_vars, sub_funcs = bash.parse(
+                self.functions[sub_func_name], APKBUILD_AUTOMATIC_VARIABLES
+            )
+            if "trigger" not in sub_funcs or "triggers" not in sub_vars:
+                continue
+
+            triggers.append(
+                f"{sub_name}.trigger={':'.join(x for x in cast(str, sub_vars['triggers']).split() if x)}"
+            )
+
+        if triggers:
+            lines.append(f"triggers={quoted_string(f'\n{"\n".join(triggers)}\n')}")
+
         functions = self.functions.copy()
         if "package" not in functions:
             functions["package"] = "\n"
@@ -126,6 +138,7 @@ class VELBUILD(APKBUILD):
                 pass
 
         tab = " " * 4
+        subpackage_functions = subpackage_map.values()
         for name, value in functions.items():
             if (
                 name in INSTALL_FUNCTION_NAMES
@@ -400,12 +413,6 @@ class VELBUILD(APKBUILD):
                 expected_vars["install"] = ""
 
             subpackages[name] = ""
-            triggers = expected_vars.get("triggers")
-            if triggers is not None and "trigger" in sub_funcs:
-                paths = ":".join(x for x in cast(str, triggers).split() if x)
-                subpackages[name] += (
-                    f"\n{tab}triggers={quoted_string(f'{name}.trigger={paths}')};"
-                )
 
             for var_name in expected_vars:
                 if (
