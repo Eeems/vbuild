@@ -340,12 +340,12 @@ class VELBUILD(APKBUILD):
         if self.sha256sums is not None:  # pyright: ignore[reportAny]
             yield ErrorType.Error, "sha256sums is not supported by vbuild"
 
-        if self.trigger is not None and self.triggers is None:  # pyright: ignore[reportAny]
+        if self.trigger is not None and not self.triggers:  # pyright: ignore[reportAny]
             yield (
                 ErrorType.Error,
                 "trigger function defined but triggers variable not set",
             )
-        elif self.trigger is None and self.triggers is not None:  # pyright: ignore[reportAny]
+        elif self.trigger is None and self.triggers:  # pyright: ignore[reportAny]
             yield (
                 ErrorType.Error,
                 "triggers variable set but trigger function not defined",
@@ -359,13 +359,13 @@ class VELBUILD(APKBUILD):
                     f"subpackage {name}: package function is not defined",
                 )
 
-            if "trigger" in sub_funcs and sub_vars.get("triggers") is None:
+            if "trigger" in sub_funcs and not sub_vars.get("triggers"):
                 yield (
                     ErrorType.Error,
                     f"subpackage {name}: trigger function defined but triggers variable not set",
                 )
 
-            elif "trigger" not in sub_funcs and sub_vars.get("triggers") is not None:
+            elif "trigger" not in sub_funcs and sub_vars.get("triggers"):
                 yield (
                     ErrorType.Error,
                     f"subpackage {name}: triggers variable set but trigger function not defined",
