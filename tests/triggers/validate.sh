@@ -12,7 +12,7 @@ if ! grep -Fq 'triggers=' APKBUILD; then
 	echo "Missing triggers variable in APKBUILD"
 	exit 1
 fi
-if ! grep -Fq "\$pkgname.trigger=/usr/share/man:/usr/local/share/man:/lib/modules/*" APKBUILD; then
+if ! grep -Fq "test-triggers.trigger=/usr/share/man:/usr/local/share/man:/lib/modules/*" APKBUILD; then
 	echo "Missing main package trigger paths in APKBUILD"
 	exit 1
 fi
