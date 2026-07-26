@@ -20,6 +20,9 @@ source="
 foo.service
 bar.socket
 "
+package() {
+	:
+}
 socket() {
 	systemdunits='
 	test/bar.socket
