@@ -334,7 +334,7 @@ class VELBUILD(APKBUILD):
         try:
             self._validate_url(self.readmeurl)
 
-        except Exception as e:
+        except (URLValidationError, URLError) as e:
             yield ErrorType.Error, f"readmeurl is not valid: {e}"
 
         try:
@@ -352,7 +352,7 @@ class VELBUILD(APKBUILD):
         try:
             self._validate_url(self.url)
 
-        except Exception as e:
+        except (URLValidationError, URLError) as e:
             yield ErrorType.Error, f"url is not valid: {e}"
 
         if self.status not in (None, "maintained", "unmaintained", "deprecated"):
@@ -368,7 +368,10 @@ class VELBUILD(APKBUILD):
                 f"pkgdesc is too long ({pkgdesc_len} chars, must be <128)",
             )
 
-        if self.maintainer is None:  # pyright: ignore[reportUnnecessaryComparison]
+        try:
+            assert self.maintainer
+
+        except AssertionError:
             yield ErrorType.Error, "maintainer is not set"
 
         if self.sha256sums is not None:

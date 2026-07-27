@@ -339,7 +339,10 @@ class APKBUILD:
                 f"pkgdesc is too long ({pkgdesc_len} chars, must be <128)",
             )
 
-        if self.maintainer is None:  # pyright: ignore[reportUnnecessaryComparison]
+        try:
+            assert self.maintainer
+
+        except AssertionError:
             yield ErrorType.Error, "maintainer is not set"
 
         if self._status not in (None, "maintained", "unmaintained", "deprecated"):
