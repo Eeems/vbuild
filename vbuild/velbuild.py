@@ -336,7 +336,7 @@ class VELBUILD(APKBUILD):
                 "status is not valid, must be 'maintained', 'unmaintained', or 'deprecated'",
             )
 
-        pkgdesc_len = len(self.pkgdesc)
+        pkgdesc_len = len(self.pkgdesc or "")
         if pkgdesc_len >= 128:
             yield (
                 ErrorType.Error,
