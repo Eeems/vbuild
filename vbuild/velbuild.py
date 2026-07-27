@@ -368,10 +368,7 @@ class VELBUILD(APKBUILD):
                 f"pkgdesc is too long ({pkgdesc_len} chars, must be <128)",
             )
 
-        try:
-            assert self.maintainer
-
-        except AssertionError:
+        if not self.variables.get("maintainer"):
             yield ErrorType.Error, "maintainer is not set"
 
         if self.sha256sums is not None:

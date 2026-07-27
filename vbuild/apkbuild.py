@@ -339,10 +339,7 @@ class APKBUILD:
                 f"pkgdesc is too long ({pkgdesc_len} chars, must be <128)",
             )
 
-        try:
-            assert self.maintainer
-
-        except AssertionError:
+        if not self.variables.get("maintainer"):
             yield ErrorType.Error, "maintainer is not set"
 
         if self._status not in (None, "maintained", "unmaintained", "deprecated"):
@@ -436,8 +433,7 @@ class APKBUILD:
         return value
 
     @typed_property
-    def pkgname(self, value: str | None) -> str:
-        assert value is not None
+    def pkgname(self, value: str) -> str:
         return value
 
     @typed_property
