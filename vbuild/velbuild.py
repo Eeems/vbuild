@@ -454,7 +454,7 @@ class VELBUILD(APKBUILD):
 
     @string_property
     @override
-    def install(self, value: list[str] | None) -> str:
+    def install(self, _: list[str] | None) -> str:
         data: list[str] = []
         for name in INSTALL_FUNCTION_NAMES:
             if name in self.functions and name != "postosupgrade":
@@ -544,7 +544,7 @@ class VELBUILD(APKBUILD):
     def options(self, value: list[str] | None) -> list[str]:
         options = list(
             {
-                *(super().options or cast(list[str], [])),
+                *(value or cast(list[str], [])),
                 *{"!check", "!fhs", "!strip", "!tracedeps"},
             }
         )
