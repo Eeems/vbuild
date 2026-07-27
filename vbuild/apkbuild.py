@@ -348,8 +348,7 @@ class APKBUILD:
             )
 
     @typed_property
-    def maintainer(self, value: str | None) -> str:
-        assert value is not None
+    def maintainer(self, value: str) -> str:
         return value
 
     @typed_property
