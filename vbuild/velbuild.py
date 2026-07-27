@@ -340,7 +340,7 @@ class VELBUILD(APKBUILD):
         try:
             self._validate_url(self.donateurl)
 
-        except Exception as e:
+        except (URLValidationError, URLError) as e:
             yield ErrorType.Error, f"donateurl is not valid: {e}"
 
         try:
@@ -396,16 +396,18 @@ class VELBUILD(APKBUILD):
                     f"subpackage {name}: package function is not defined",
                 )
 
-            if "trigger" in sub_funcs and not sub_vars.get("triggers"):
+            triggers = sub_vars.get("triggers")
+            if isinstance(triggers, str) and bool(triggers.split()):
+                if "trigger" not in sub_funcs:
+                    yield (
+                        ErrorType.Error,
+                        f"subpackage {name}: triggers variable set but trigger function not defined",
+                    )
+
+            elif "trigger" in sub_funcs:
                 yield (
                     ErrorType.Error,
                     f"subpackage {name}: trigger function defined but triggers variable not set",
-                )
-
-            elif "trigger" not in sub_funcs and sub_vars.get("triggers"):
-                yield (
-                    ErrorType.Error,
-                    f"subpackage {name}: triggers variable set but trigger function not defined",
                 )
 
     @APKBUILD.subpackages.getter
