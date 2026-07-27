@@ -1,0 +1,35 @@
+maintainer="Test Author <test@example.com>"
+pkgname=test-triggers
+pkgver=1.0.0
+pkgrel=0
+pkgdesc="Test package with triggers"
+upstream_author="test-author"
+category="test"
+url="https://example.com"
+arch="noarch"
+license="MIT"
+subpackages='
+test-triggers-sub:subpackage
+'
+triggers="
+/usr/share/man
+/usr/local/share/man
+/lib/modules/*
+"
+trigger() {
+	echo "triggered"
+}
+package() {
+	mkdir -p "$pkgdir"
+}
+subpackage() {
+	triggers="
+	/usr/share/doc
+	"
+	trigger() {
+		echo "subpackage triggered"
+	}
+	package() {
+		mkdir -p "$subpkgdir"
+	}
+}

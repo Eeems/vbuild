@@ -22,10 +22,11 @@ from .apkbuild import (
     APKBUILD_AUTOMATIC_VARIABLES,
     APKBUILD_VARIABLES,
     ErrorType,
+    Property,
+    is_type,
     put_variables,
     quoted_string,
-    string_array_property,
-    string_property,
+    typed_property,
 )
 
 INSTALL_FUNCTION_NAME_MAP = {
@@ -49,6 +50,30 @@ class URLValidationError(Exception):
     pass
 
 
+def string_array_property_always(
+    func: Callable[..., list[str]],
+) -> Property[list[str]]:
+    name = func.__name__
+
+    def fget(self: "APKBUILD") -> list[str]:
+        value = self.variables.get(name, None)
+        assert is_type(value, str | None), f"Cannot get {name}, value is not valid"
+        if value is None:
+            return func(self, [])
+
+        assert isinstance(value, str)
+        return func(self, value.split())
+
+    def fset(self: "APKBUILD", value: list[str]) -> None:
+        assert is_type(value, list[str]), f"Cannot set {name}, value is not valid"
+        self.variables[name] = f"\n{'\n'.join(value)}\n"
+
+    def fdel(self: "APKBUILD") -> None:
+        del self.variables[name]
+
+    return Property[list[str]](fget, fset, fdel, func.__doc__)
+
+
 class VELBUILD(APKBUILD):
     @APKBUILD.text.getter
     def text(self) -> str:
@@ -58,7 +83,7 @@ class VELBUILD(APKBUILD):
             if (
                 value is None
                 or name in bash.DEFAULT_VARIABLE_NAMES
-                or name == "sha512sums"
+                or name in ("sha512sums", "triggers")
             ):
                 continue
 
@@ -99,15 +124,29 @@ class VELBUILD(APKBUILD):
 
                 lines.append(")")
 
-        lines.append(
-            f"options={quoted_string(f'\n{"\n".join(cast(list[str], self.options))}\n')}"
-        )
-        if self.install.strip():  # pyright: ignore[reportAny]
-            lines.append(f"install={quoted_string(self.install)}")  # pyright: ignore[reportAny]
+        lines.append(f"options={quoted_string(f'\n{"\n".join(self.options)}\n')}")
+        if self.install.strip():
+            lines.append(f"install={quoted_string(self.install)}")
 
-        tab = " " * 4
+        triggers: list[str] = []
+        if self.triggers:
+            triggers.append(f"{self.pkgname}.trigger={':'.join(self.triggers)}")
+
         subpackage_map = self._subpackages
-        subpackage_functions = subpackage_map.values()
+        for sub_name, sub_func_name in subpackage_map.items():
+            sub_vars, sub_funcs = bash.parse(
+                self.functions[sub_func_name], APKBUILD_AUTOMATIC_VARIABLES
+            )
+            if "trigger" not in sub_funcs or "triggers" not in sub_vars:
+                continue
+
+            triggers.append(
+                f"{sub_name}.trigger={':'.join(x for x in cast(str, sub_vars['triggers']).split() if x)}"
+            )
+
+        if triggers:
+            lines.append(f"triggers={quoted_string(f'\n{"\n".join(triggers)}\n')}")
+
         functions = self.functions.copy()
         if "package" not in functions:
             functions["package"] = "\n"
@@ -122,8 +161,13 @@ class VELBUILD(APKBUILD):
                 pass
 
         tab = " " * 4
+        subpackage_functions = subpackage_map.values()
         for name, value in functions.items():
-            if name in INSTALL_FUNCTION_NAMES or name in subpackage_functions:
+            if (
+                name in INSTALL_FUNCTION_NAMES
+                or name in subpackage_functions
+                or name == "trigger"
+            ):
                 continue
 
             if name == "image":
@@ -161,18 +205,16 @@ class VELBUILD(APKBUILD):
                 )
 
             elif name == "package":
-                if (
-                    self.postosupgrade is not None or self.systemdunits  # pyright: ignore[reportAny]
-                ):
+                if self.postosupgrade is not None or self.systemdunits:
                     fn_name = INSTALL_FUNCTION_NAME_MAP["postosupgrade"]
                     value += f'{tab}install -Dm755 "$startdir"/"$pkgname".{fn_name} '  # noqa: PLW2901
                     value += (  # noqa: PLW2901
                         '"$pkgdir"/home/root/.vellum/hooks/post-os-upgrade/"$pkgname";\n'
                     )
 
-                for unit in self.systemdunits:  # pyright: ignore[reportAny]
-                    unit_name = os.path.basename(unit)  # pyright: ignore[reportAny]
-                    value += f'{tab}install -Dm644 "$srcdir/{unit}" "$pkgdir/home/root/.vellum/share/{self.pkgname}/{unit_name}";\n'  # noqa: PLW2901  # pyright: ignore[reportAny]
+                for unit in self.systemdunits:
+                    unit_name = os.path.basename(unit)
+                    value += f'{tab}install -Dm644 "$srcdir/{unit}" "$pkgdir/home/root/.vellum/share/{self.pkgname}/{unit_name}";\n'  # noqa: PLW2901
 
             lines.append(f"{name}() {{{value}}}")
 
@@ -187,14 +229,14 @@ class VELBUILD(APKBUILD):
         return "\n".join(lines)
 
     def save(self, path: str) -> None:
-        assert isinstance(self.pkgname, str)  # pyright: ignore[reportAny]
+        assert isinstance(self.pkgname, str)
         with open(os.path.join(path, "APKBUILD"), "w") as f:
             _ = f.write(self.text + "\n")
 
         for name, functionName in INSTALL_FUNCTION_NAME_MAP.items():
             src = getattr(self, name)  # pyright: ignore[reportAny]
 
-            footer = self._getfooter(self.pkgname, name, self.systemdunits)  # pyright: ignore[reportAny]
+            footer = self._getfooter(self.pkgname, name, self.systemdunits)
             if src is None and footer is None:
                 continue
 
@@ -210,6 +252,13 @@ class VELBUILD(APKBUILD):
                 "w",
             ) as f:
                 _ = f.write("\n".join([header, src or "", footer or ""]))
+
+        if self.trigger is not None:
+            with open(
+                os.path.join(path, f"{self.pkgname}.trigger"),
+                "w",
+            ) as f:
+                _ = f.write("#!/bin/sh\n" + self.trigger)
 
         for name, body in super().subpackages.items():
             sub_vars, sub_funcs = bash.parse(body, APKBUILD_AUTOMATIC_VARIABLES)
@@ -242,6 +291,13 @@ class VELBUILD(APKBUILD):
                 ) as f:
                     _ = f.write("\n".join([header, src, footer or ""]))
 
+            if "trigger" in sub_funcs:
+                with open(
+                    os.path.join(path, f"{name}.trigger"),
+                    "w",
+                ) as f:
+                    _ = f.write("#!/bin/sh\n" + cleandoc(sub_funcs["trigger"]))
+
     def _validate_url(self, url: str | None) -> None:
         if url is None:
             return
@@ -266,54 +322,90 @@ class VELBUILD(APKBUILD):
         if "image" in self.variables and "image" in self.functions:
             yield ErrorType.Error, "image set as both variable and function"
 
-        if self.upstream_author is None:  # pyright: ignore[reportAny]
+        if "package" not in self.functions:
+            yield ErrorType.Error, "package function is not defined"
+
+        if self.upstream_author is None:
             yield ErrorType.Error, "upstream_author is not set"
 
-        if self.category is None:  # pyright: ignore[reportAny]
+        if self.category is None:
             yield ErrorType.Error, "category is not set"
 
         try:
-            self._validate_url(self.readmeurl)  # pyright: ignore[reportAny]
+            self._validate_url(self.readmeurl)
 
-        except Exception as e:
+        except (URLValidationError, URLError) as e:
             yield ErrorType.Error, f"readmeurl is not valid: {e}"
 
         try:
-            self._validate_url(self.donateurl)  # pyright: ignore[reportAny]
+            self._validate_url(self.donateurl)
 
-        except Exception as e:
+        except (URLValidationError, URLError) as e:
             yield ErrorType.Error, f"donateurl is not valid: {e}"
 
         try:
-            self._validate_url(self.changelogurl)  # pyright: ignore[reportAny]
+            self._validate_url(self.changelogurl)
 
         except (URLValidationError, URLError) as e:
             yield ErrorType.Error, f"changelogurl is not valid: {e}"
 
         try:
-            self._validate_url(self.url)  # pyright: ignore[reportAny]
+            self._validate_url(self.url)
 
-        except Exception as e:
+        except (URLValidationError, URLError) as e:
             yield ErrorType.Error, f"url is not valid: {e}"
 
-        if self.status not in (None, "maintained", "unmaintained", "deprecated"):  # pyright: ignore[reportAny]
+        if self.status not in (None, "maintained", "unmaintained", "deprecated"):
             yield (
                 ErrorType.Error,
                 "status is not valid, must be 'maintained', 'unmaintained', or 'deprecated'",
             )
 
-        pkgdesc_len = len(self.pkgdesc)  # pyright: ignore[reportAny]
+        pkgdesc_len = len(self.pkgdesc or "")
         if pkgdesc_len >= 128:
             yield (
                 ErrorType.Error,
                 f"pkgdesc is too long ({pkgdesc_len} chars, must be <128)",
             )
 
-        if self.maintainer is None:  # pyright: ignore[reportAny]
+        if not self.variables.get("maintainer"):
             yield ErrorType.Error, "maintainer is not set"
 
-        if self.sha256sums is not None:  # pyright: ignore[reportAny]
+        if self.sha256sums is not None:
             yield ErrorType.Error, "sha256sums is not supported by vbuild"
+
+        if self.trigger is not None and not self.triggers:
+            yield (
+                ErrorType.Error,
+                "trigger function defined but triggers variable not set",
+            )
+        elif self.trigger is None and self.triggers:
+            yield (
+                ErrorType.Error,
+                "triggers variable set but trigger function not defined",
+            )
+
+        for name, body in super().subpackages.items():
+            sub_vars, sub_funcs = bash.parse(body, APKBUILD_AUTOMATIC_VARIABLES)
+            if "package" not in sub_funcs:
+                yield (
+                    ErrorType.Error,
+                    f"subpackage {name}: package function is not defined",
+                )
+
+            triggers = sub_vars.get("triggers")
+            if isinstance(triggers, str) and bool(triggers.split()):
+                if "trigger" not in sub_funcs:
+                    yield (
+                        ErrorType.Error,
+                        f"subpackage {name}: triggers variable set but trigger function not defined",
+                    )
+
+            elif "trigger" in sub_funcs:
+                yield (
+                    ErrorType.Error,
+                    f"subpackage {name}: trigger function defined but triggers variable not set",
+                )
 
     @APKBUILD.subpackages.getter
     def subpackages(self) -> dict[str, str]:
@@ -344,10 +436,12 @@ class VELBUILD(APKBUILD):
                 expected_vars["install"] = ""
 
             subpackages[name] = ""
+
             for var_name in expected_vars:
                 if (
                     var_name in bash.DEFAULT_VARIABLE_NAMES
                     or var_name in APKBUILD_AUTOMATIC_VARIABLES
+                    or var_name == "triggers"
                 ):
                     continue
 
@@ -385,16 +479,17 @@ class VELBUILD(APKBUILD):
 
         return subpackages
 
-    @APKBUILD.install.getter
+    @property
+    @override
     def install(self) -> str:
         data: list[str] = []
         for name in INSTALL_FUNCTION_NAMES:
             if name in self.functions and name != "postosupgrade":
-                data.append(f"{self.pkgname}.{INSTALL_FUNCTION_NAME_MAP[name]}")  # pyright: ignore[reportAny]
+                data.append(f"{self.pkgname}.{INSTALL_FUNCTION_NAME_MAP[name]}")
 
-        if self.systemdunits:  # pyright: ignore[reportAny]
+        if self.systemdunits:
             for name in ("postinstall", "postupgrade", "predeinstall"):
-                data.append(f"{self.pkgname}.{INSTALL_FUNCTION_NAME_MAP[name]}")  # pyright: ignore[reportAny]
+                data.append(f"{self.pkgname}.{INSTALL_FUNCTION_NAME_MAP[name]}")
 
         return f"\n{'\n'.join(sorted(set(data)))}\n"
 
@@ -426,33 +521,37 @@ class VELBUILD(APKBUILD):
     def postosupgrade(self) -> str | None:
         return self._getsrc("postosupgrade")
 
-    @string_property
+    @property
+    def trigger(self) -> str | None:
+        return self._getsrc("trigger")
+
+    @typed_property
     def category(self, value: str | None) -> str | None:
         return value
 
-    @string_property
+    @typed_property
     def readmeurl(self, value: str | None) -> str | None:
         return value
 
-    @string_property
+    @typed_property
     def donateurl(self, value: str | None) -> str | None:
         return value
 
-    @string_property
+    @typed_property
     def changelogurl(self, value: str | None) -> str | None:
         return value
 
-    @string_property
+    @typed_property
     def status(self, value: str | None) -> str | None:
         return value
 
-    @string_property
+    @typed_property
     def upstream_author(self, value: str | None) -> str | None:
         return value
 
-    @string_array_property
-    def systemdunits(self, value: list[str] | None) -> list[str]:
-        return value or []
+    @string_array_property_always
+    def systemdunits(self, value: list[str]) -> list[str]:
+        return value
 
     @property
     def image(self) -> str | None:
@@ -467,11 +566,12 @@ class VELBUILD(APKBUILD):
 
         return None
 
-    @APKBUILD.options.getter
-    def options(self) -> list[str]:
+    @string_array_property_always
+    @override
+    def options(self, value: list[str]) -> list[str]:
         options = list(
             {
-                *cast(list[str], super().options or []),
+                *value,
                 *{"!check", "!fhs", "!strip", "!tracedeps"},
             }
         )

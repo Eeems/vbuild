@@ -58,6 +58,14 @@ A function containing the contents of $pkgname.post-install. See [APKBUILD(5)](h
 
 A function containing the contents of $pkgname.post-os-upgrade.See [vellum-dev/vellum](https://github.com/vellum-dev/vellum/?tab=readme-ov-file#package-scripts) for more information. This function can be called by the other lifecycle scripts.
 
+#### trigger
+
+A function containing the contents of `$pkgname.trigger`. See [APKBUILD(5)](https://man.archlinux.org/man/APKBUILD.5.en#Optional_Variables) for more information. This script runs when monitored directories specified in `triggers` variable change. Must be used together with the `triggers` variable.
+
+#### triggers
+
+A string array of directory paths to monitor for changes. See [APKBUILD(5)](https://man.archlinux.org/man/APKBUILD.5.en#Optional_Variables) for more information. Must be used together with the `trigger` function.
+
 #### systemdunits
 
 A string array of filenames for systemd units to automatically deploy, enable, start, stop and disable as part of the package workflow. Template units will be disabled, but have to manually be enabled, started, and stopped.

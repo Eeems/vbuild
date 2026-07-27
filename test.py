@@ -8,8 +8,8 @@ from typing import Any
 
 from vbuild.apkbuild import (
     APKBUILD,
-    StringArrayProperty,
-    StringProperty,
+    Property,
+    is_type,  # noqa: F401  # pyright: ignore[reportUnusedImport]
     quoted_string,
 )
 from vbuild.velbuild import VELBUILD
@@ -81,6 +81,22 @@ def _isinstance(source: str, cls: type, debug: Callable[[], Any] | None = None) 
         print(f"  {debug()}")
 
 
+_assert("is_type(None, type(None))")
+_assert("not is_type(1, type(None))")
+_assert('is_type("hello", str)')
+_assert("not is_type(1, str)")
+_assert("is_type(None, str | None)")
+_assert('is_type("hello", str | None)')
+_assert("not is_type(1, str | None)")
+_assert("is_type(None, list[str] | None)")
+_assert('is_type(["a", "b"], list[str] | None)')
+_assert('not is_type("hello", list[str] | None)')
+_assert("not is_type([1, 2], list[str] | None)")
+_assert("is_type(None, list[str] | str | None)")
+_assert('is_type("hello", list[str] | str | None)')
+_assert('is_type(["a", "b"], list[str] | str | None)')
+_assert("not is_type(1, list[str] | str | None)")
+_assert("not is_type([1], list[str] | str | None)")
 _assert('quoted_string("x") == "\'x\'"', lambda: quoted_string("x"))
 _assert('quoted_string("$srcdir") == "$srcdir"', lambda: quoted_string("$srcdir"))
 _assert('quoted_string("${srcdir}") == "$srcdir"', lambda: quoted_string("${srcdir}"))
@@ -122,8 +138,8 @@ _assert('quoted_string("\'") == "\\"\\\'\\""', lambda: quoted_string("'"))
 _assert(
     "quoted_string(\"it's\") == \"'it'\\\"'\\\"'s'\"", lambda: quoted_string("it's")
 )
-_isinstance("APKBUILD.maintainer", StringProperty)
-_isinstance("APKBUILD.arch", StringArrayProperty)
+_isinstance("APKBUILD.maintainer", Property)
+_isinstance("APKBUILD.arch", Property)
 apkbuild = APKBUILD({}, {})
 _assert("not apkbuild.text.strip()")
 _raises("apkbuild.maintainer", AssertionError)
@@ -147,22 +163,22 @@ _assert("\"'my-custom-image:latest'\" in velbuild.image", lambda: velbuild.image
 _raises('setattr(velbuild, "image", 1)', AssertionError)
 _assert(
     'set(velbuild.options) == {"!check", "!fhs", "!strip", "!tracedeps"}',
-    lambda: set(velbuild.options),  # pyright: ignore[reportAny]
+    lambda: set(velbuild.options),
 )
 velbuild.variables["options"] = "check"
 _assert(
     'set(velbuild.options) == {"!fhs", "!strip", "!tracedeps"}',
-    lambda: set(velbuild.options),  # pyright: ignore[reportAny]
+    lambda: set(velbuild.options),
 )
 velbuild.variables["options"] += "\nfhs"
 _assert(
     'set(velbuild.options) == {"!strip", "!tracedeps"}',
-    lambda: set(velbuild.options),  # pyright: ignore[reportAny]
+    lambda: set(velbuild.options),
 )
 velbuild.variables["options"] += "\nstrip"
-_assert('set(velbuild.options) == {"!tracedeps"}', lambda: set(velbuild.options))  # pyright: ignore[reportAny]
+_assert('set(velbuild.options) == {"!tracedeps"}', lambda: set(velbuild.options))
 velbuild.variables["options"] += "\ntracedeps"
-_assert("not velbuild.options", lambda: set(velbuild.options))  # pyright: ignore[reportAny]
+_assert("not velbuild.options", lambda: set(velbuild.options))
 velbuild.pkgname = "test-pkg"
 velbuild.pkgver = "1.0"
 velbuild.pkgrel = "0"
@@ -176,13 +192,13 @@ text = velbuild.text
 _assert("'VBUILD_BUILD_SCRIPT' in text", lambda: text)
 _assert("'my-custom-image:latest' in text", lambda: text)
 _assert("'podman' in text and 'run' in text", lambda: text)
-velbuild2 = VELBUILD({}, {})
-velbuild2.pkgname = "test-pkg2"
-velbuild2.pkgver = "1.0"
-velbuild2.pkgrel = "0"
-velbuild2.functions["build"] = "echo 'building...'"
-text2 = velbuild2.text
-_assert("'VBUILD_BUILD_SCRIPT' not in text2", lambda: text2)
+velbuild = VELBUILD({}, {})
+velbuild.pkgname = "test-pkg"
+velbuild.pkgver = "1.0"
+velbuild.pkgrel = "0"
+velbuild.functions["build"] = "echo 'building...'"
+text = velbuild.text
+_assert("'VBUILD_BUILD_SCRIPT' not in text", lambda: text)
 
 if FAILED:
     sys.exit(1)

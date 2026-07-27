@@ -32,15 +32,13 @@ def command(args: Namespace) -> int:
         return ret
 
     apkbuild = parse_apkbuild(apkbuild_path)
-    checksums = apkbuild.sha512sums  # pyright: ignore[reportAny]
-    assert checksums is not None
-    assert isinstance(checksums, list)
-    assert all([isinstance(x, str) for x in checksums])  # pyright: ignore[reportUnknownVariableType]
-    checksums = cast(list[str], checksums)
+    assert apkbuild.sha512sums is not None
+    assert isinstance(apkbuild.sha512sums, list)
+    assert all([isinstance(x, str) for x in apkbuild.sha512sums])
     velbuild_path = os.path.join(directory, "VELBUILD")
     velbuild = parse_velbuild(velbuild_path)
-    print(f">>> {velbuild.pkgname}: Updating the sha512sums in {velbuild_path}...")  # pyright: ignore[reportAny]
-    if velbuild.sha512sums == checksums:  # pyright: ignore[reportAny]
+    print(f">>> {velbuild.pkgname}: Updating the sha512sums in {velbuild_path}...")
+    if velbuild.sha512sums == apkbuild.sha512sums:
         return 0
 
     with open(velbuild_path) as f:
@@ -79,6 +77,6 @@ def command(args: Namespace) -> int:
 
     with open(velbuild_path, "w") as f:
         f.writelines(lines_out)
-        _ = f.write(f"sha512sums={shlex.quote('\n'.join(checksums))}")
+        _ = f.write(f"sha512sums={shlex.quote('\n'.join(apkbuild.sha512sums))}")
 
     return 0
