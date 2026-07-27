@@ -9,6 +9,7 @@ from typing import Any
 from vbuild.apkbuild import (
     APKBUILD,
     Property,
+    is_type,  # noqa: F401  # pyright: ignore[reportUnusedImport]
     quoted_string,
 )
 from vbuild.velbuild import VELBUILD
@@ -80,6 +81,22 @@ def _isinstance(source: str, cls: type, debug: Callable[[], Any] | None = None) 
         print(f"  {debug()}")
 
 
+_assert("is_type(None, type(None))")
+_assert("not is_type(1, type(None))")
+_assert('is_type("hello", str)')
+_assert("not is_type(1, str)")
+_assert("is_type(None, str | None)")
+_assert('is_type("hello", str | None)')
+_assert("not is_type(1, str | None)")
+_assert("is_type(None, list[str] | None)")
+_assert('is_type(["a", "b"], list[str] | None)')
+_assert('not is_type("hello", list[str] | None)')
+_assert("not is_type([1, 2], list[str] | None)")
+_assert("is_type(None, list[str] | str | None)")
+_assert('is_type("hello", list[str] | str | None)')
+_assert('is_type(["a", "b"], list[str] | str | None)')
+_assert("not is_type(1, list[str] | str | None)")
+_assert("not is_type([1], list[str] | str | None)")
 _assert('quoted_string("x") == "\'x\'"', lambda: quoted_string("x"))
 _assert('quoted_string("$srcdir") == "$srcdir"', lambda: quoted_string("$srcdir"))
 _assert('quoted_string("${srcdir}") == "$srcdir"', lambda: quoted_string("${srcdir}"))

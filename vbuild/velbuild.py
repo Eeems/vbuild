@@ -22,6 +22,8 @@ from .apkbuild import (
     APKBUILD_AUTOMATIC_VARIABLES,
     APKBUILD_VARIABLES,
     ErrorType,
+    Property,
+    is_type,
     put_variables,
     quoted_string,
     typed_property,
@@ -46,6 +48,30 @@ class NonRaisingHTTPErrorProcessor(HTTPErrorProcessor):
 
 class URLValidationError(Exception):
     pass
+
+
+def string_array_property_always(
+    func: Callable[..., list[str]],
+) -> Property[list[str]]:
+    name = func.__name__
+
+    def fget(self: "APKBUILD") -> list[str]:
+        value = self.variables.get(name, None)
+        assert is_type(value, str | None), f"Cannot get {name}, value is not valid"
+        if value is None:
+            return func(self, [])
+
+        assert isinstance(value, str)
+        return func(self, value.split())
+
+    def fset(self: "APKBUILD", value: list[str]) -> None:
+        assert is_type(value, list[str]), f"Cannot set {name}, value is not valid"
+        self.variables[name] = f"\n{'\n'.join(value)}\n"
+
+    def fdel(self: "APKBUILD") -> None:
+        del self.variables[name]
+
+    return Property[list[str]](fget, fset, fdel, func.__doc__)
 
 
 class VELBUILD(APKBUILD):
@@ -451,9 +477,9 @@ class VELBUILD(APKBUILD):
 
         return subpackages
 
-    @typed_property
+    @property
     @override
-    def install(self, _: list[str] | None) -> str:
+    def install(self) -> str:
         data: list[str] = []
         for name in INSTALL_FUNCTION_NAMES:
             if name in self.functions and name != "postosupgrade":
@@ -521,9 +547,9 @@ class VELBUILD(APKBUILD):
     def upstream_author(self, value: str | None) -> str | None:
         return value
 
-    @typed_property
-    def systemdunits(self, value: list[str] | None) -> list[str]:
-        return value or []
+    @string_array_property_always
+    def systemdunits(self, value: list[str]) -> list[str]:
+        return value
 
     @property
     def image(self) -> str | None:
@@ -538,12 +564,12 @@ class VELBUILD(APKBUILD):
 
         return None
 
-    @typed_property
+    @string_array_property_always
     @override
-    def options(self, value: list[str] | None) -> list[str]:
+    def options(self, value: list[str]) -> list[str]:
         options = list(
             {
-                *(value or cast(list[str], [])),
+                *value,
                 *{"!check", "!fhs", "!strip", "!tracedeps"},
             }
         )

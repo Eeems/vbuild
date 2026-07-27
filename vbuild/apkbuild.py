@@ -82,6 +82,23 @@ class Property[T](property):
         return super().__get__(obj, objtype)  # pyright: ignore[reportAny]
 
 
+def is_type(value: Any, annotation: Any) -> bool:  # pyright: ignore[reportExplicitAny, reportAny]
+    if isinstance(annotation, types.UnionType):
+        return any(is_type(value, member) for member in annotation.__args__)  # pyright: ignore[reportAny]
+
+    if annotation is type(None):
+        return value is None
+
+    origin = getattr(annotation, "__origin__", None)  # pyright: ignore[reportAny]
+    if origin is list:
+        return isinstance(value, list) and all(
+            is_type(item, annotation.__args__[0])  # pyright: ignore[reportAny]
+            for item in value  # pyright: ignore[reportUnknownVariableType]
+        )
+
+    return isinstance(value, annotation)
+
+
 def typed_property[T](func: Callable[..., T]) -> Property[T]:
     name = func.__name__
     parameters = [p for p in inspect.signature(func).parameters if p != "self"]
@@ -90,63 +107,47 @@ def typed_property[T](func: Callable[..., T]) -> Property[T]:
         f"typed_property {name}: parameter must have type hint"
     )
 
-    def is_list_type(annotation: Any) -> bool:  # pyright: ignore[reportExplicitAny, reportAny]
-        origin = getattr(annotation, "__origin__", None)  # pyright: ignore[reportAny]
-        if origin is list:
-            return True
-
-        if isinstance(annotation, types.UnionType):
-            return any(is_list_type(arg) for arg in annotation.__args__)  # pyright: ignore[reportAny]
-
-        return False
-
-    is_list = is_list_type(annotation)
-    if not is_list:
-        target = annotation  # pyright: ignore[reportAny]
-
-    elif isinstance(annotation, types.UnionType):
-        target = next(  # pyright: ignore[reportAny]
-            a
-            for a in annotation.__args__  # pyright: ignore[reportAny]
-            if getattr(a, "__origin__", None) is list  # pyright: ignore[reportAny]
-        ).__args__[0]
-
-    else:
-        target = annotation.__args__[0]  # pyright: ignore[reportAny]
-
-    if isinstance(target, types.UnionType):
-        allowed_types = tuple(a for a in target.__args__ if a is not type(None))  # pyright: ignore[reportAny]
-
-    else:
-        allowed_types = (target,)
-
     def fget(self: "APKBUILD") -> T:
         value = self.variables.get(name, None)
-        assert value is None or isinstance(value, str), (
-            f"Cannot get {name}, value is not str"
-        )
-        return func(
-            self, None if value is None else value.split() if is_list else value
-        )
+        assert is_type(value, annotation), f"Cannot get {name}, value is not valid"
+        return func(self, value)
 
     def fset(self: "APKBUILD", value: T) -> None:
-        if is_list:
-            assert value is None or (
-                isinstance(value, list)
-                and (not value or all(isinstance(x, allowed_types) for x in value))  # pyright: ignore[reportUnknownVariableType]
-            ), f"Cannot set {name}, value is not {allowed_types}"
-            self.variables[name] = None if value is None else f"\n{'\n'.join(value)}\n"  # pyright: ignore[reportUnknownArgumentType]
-
-        else:
-            assert value is None or isinstance(value, allowed_types), (
-                f"Cannot set {name}, value is not {allowed_types}"
-            )
-            self.variables[name] = value  # pyright: ignore[reportArgumentType]
+        assert is_type(value, annotation), (
+            f"Cannot set {name}, value is not {annotation}"
+        )
+        self.variables[name] = value  # pyright: ignore[reportArgumentType]
 
     def fdel(self: "APKBUILD") -> None:
         del self.variables[name]
 
     return Property(fget, fset, fdel, func.__doc__)
+
+
+def string_array_property(
+    func: Callable[..., list[str] | None],
+) -> Property[list[str] | None]:
+    name = func.__name__
+
+    def fget(self: "APKBUILD") -> list[str] | None:
+        value = self.variables.get(name, None)
+        assert is_type(value, str | None), f"Cannot get {name}, value is not valid"
+        if value is None:
+            return func(self, None)
+
+        assert isinstance(value, str)
+        return func(self, value.split())
+
+    def fset(self: "APKBUILD", value: list[str] | None) -> None:
+        assert is_type(value, list[str] | None), (
+            f"Cannot set {name}, value is not valid"
+        )
+        self.variables[name] = None if value is None else f"\n{'\n'.join(value)}\n"
+
+    def fdel(self: "APKBUILD") -> None:
+        del self.variables[name]
+
+    return Property[list[str] | None](fget, fset, fdel, func.__doc__)
 
 
 def get_token(value: str, offset: int) -> tuple[int, str]:
@@ -351,35 +352,35 @@ class APKBUILD:
     def maintainer(self, value: str) -> str:
         return value
 
-    @typed_property
+    @string_array_property
     def arch(self, value: list[str] | None) -> list[str] | None:
         return value
 
-    @typed_property
+    @string_array_property
     def depends(self, value: list[str] | None) -> list[str] | None:
         return value
 
-    @typed_property
+    @string_array_property
     def depends_dev(self, value: list[str] | None) -> list[str] | None:
         return value
 
-    @typed_property
+    @string_array_property
     def depends_doc(self, value: list[str] | None) -> list[str] | None:
         return value
 
-    @typed_property
+    @string_array_property
     def depends_openrc(self, value: list[str] | None) -> list[str] | None:
         return value
 
-    @typed_property
+    @string_array_property
     def depends_libs(self, value: list[str] | None) -> list[str] | None:
         return value
 
-    @typed_property
+    @string_array_property
     def depends_static(self, value: list[str] | None) -> list[str] | None:
         return value
 
-    @typed_property
+    @string_array_property
     def checkdepends(self, value: list[str] | None) -> list[str] | None:
         return value
 
@@ -387,11 +388,11 @@ class APKBUILD:
     def giturl(self, value: str | None) -> str | None:
         return value
 
-    @typed_property
+    @string_array_property
     def install(self, value: list[str] | None) -> list[str] | None:
         return value
 
-    @typed_property
+    @string_array_property
     def install_if(self, value: list[str] | None) -> list[str] | None:
         return value
 
@@ -399,27 +400,27 @@ class APKBUILD:
     def license(self, value: str | None) -> str | None:
         return value
 
-    @typed_property
+    @string_array_property
     def makedepends(self, value: list[str] | None) -> list[str] | None:
         return value
 
-    @typed_property
+    @string_array_property
     def makedepends_build(self, value: list[str] | None) -> list[str] | None:
         return value
 
-    @typed_property
+    @string_array_property
     def makedepends_host(self, value: list[str] | None) -> list[str] | None:
         return value
 
-    @typed_property
+    @string_array_property
     def sha256sums(self, value: list[str] | None) -> list[str] | None:
         return value
 
-    @typed_property
+    @string_array_property
     def sha512sums(self, value: list[str] | None) -> list[str] | None:
         return value
 
-    @typed_property
+    @string_array_property
     def options(self, value: list[str] | None) -> list[str] | None:
         return value
 
@@ -427,7 +428,7 @@ class APKBUILD:
     def pkgdesc(self, value: str | None) -> str | None:
         return value
 
-    @typed_property
+    @string_array_property
     def pkggroups(self, value: list[str] | None) -> list[str] | None:
         return value
 
@@ -440,7 +441,7 @@ class APKBUILD:
     def pkgrel(self, value: str | None) -> str | None:
         return value
 
-    @typed_property
+    @string_array_property
     def pkgusers(self, value: list[str] | None) -> list[str] | None:
         return value
 
@@ -448,7 +449,7 @@ class APKBUILD:
     def pkgver(self, value: str | None) -> str | None:
         return value
 
-    @typed_property
+    @string_array_property
     def provides(self, value: list[str] | None) -> list[str] | None:
         return value
 
@@ -456,15 +457,15 @@ class APKBUILD:
     def provider_priority(self, value: str | None) -> str | None:
         return value
 
-    @typed_property
+    @string_array_property
     def replaces(self, value: list[str] | None) -> list[str] | None:
         return value
 
-    @typed_property
+    @string_array_property
     def replaces_priority(self, value: list[str] | None) -> list[str] | None:
         return value
 
-    @typed_property
+    @string_array_property
     def source(self, value: list[str] | None) -> list[str] | None:
         return value
 
@@ -499,7 +500,7 @@ class APKBUILD:
     def subpackages(self) -> dict[str, str]:
         return {k: self.functions[v] for k, v in self._subpackages.items()}
 
-    @typed_property
+    @string_array_property
     def triggers(self, value: list[str] | None) -> list[str] | None:
         return value
 
