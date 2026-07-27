@@ -78,7 +78,7 @@ class StringProperty(property):
     @overload
     def __get__(self, obj: Any, objtype: type | None = None) -> str: ...  # pyright: ignore[reportExplicitAny, reportAny, reportInconsistentOverload]
     @override
-    def __get__(self, obj: Any, objtype: type | None = None) -> str | None:  # pyright: ignore[reportExplicitAny, reportAny]  # noqa: F821
+    def __get__(self, obj: Any, objtype: type | None = None) -> str | None:  # pyright: ignore[reportExplicitAny, reportAny]
         return super().__get__(obj, objtype)  # pyright: ignore[reportAny]
 
 
@@ -86,7 +86,7 @@ class StringArrayProperty(property):
     @overload
     def __get__(self, obj: Any, objtype: type | None = None) -> list[str]: ...  # pyright: ignore[reportExplicitAny, reportAny, reportInconsistentOverload]
     @override
-    def __get__(self, obj: Any, objtype: type | None = None) -> list[str] | None:  # pyright: ignore[reportExplicitAny, reportAny]  # noqa: F821
+    def __get__(self, obj: Any, objtype: type | None = None) -> list[str] | None:  # pyright: ignore[reportExplicitAny, reportAny]
         return super().__get__(obj, objtype)  # pyright: ignore[reportAny]
 
 
