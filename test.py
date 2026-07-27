@@ -8,8 +8,7 @@ from typing import Any
 
 from vbuild.apkbuild import (
     APKBUILD,
-    StringArrayProperty,
-    StringProperty,
+    Property,
     quoted_string,
 )
 from vbuild.velbuild import VELBUILD
@@ -122,8 +121,8 @@ _assert('quoted_string("\'") == "\\"\\\'\\""', lambda: quoted_string("'"))
 _assert(
     "quoted_string(\"it's\") == \"'it'\\\"'\\\"'s'\"", lambda: quoted_string("it's")
 )
-_isinstance("APKBUILD.maintainer", StringProperty)
-_isinstance("APKBUILD.arch", StringArrayProperty)
+_isinstance("APKBUILD.maintainer", Property)
+_isinstance("APKBUILD.arch", Property)
 apkbuild = APKBUILD({}, {})
 _assert("not apkbuild.text.strip()")
 _raises("apkbuild.maintainer", AssertionError)

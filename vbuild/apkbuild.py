@@ -1,5 +1,7 @@
+import inspect
 import shlex
 import string
+import types
 from collections.abc import (
     Callable,
     Generator,
@@ -7,7 +9,7 @@ from collections.abc import (
 from enum import Enum
 from typing import (
     Any,
-    overload,
+    get_type_hints,
     override,
 )
 
@@ -74,65 +76,77 @@ class ErrorType(Enum):
         return str(type)[10:]
 
 
-class StringProperty(property):
-    @overload
-    def __get__(self, obj: Any, objtype: type | None = None) -> str: ...  # pyright: ignore[reportExplicitAny, reportAny, reportInconsistentOverload]
+class Property[T](property):
     @override
-    def __get__(self, obj: Any, objtype: type | None = None) -> str | None:  # pyright: ignore[reportExplicitAny, reportAny]
+    def __get__(self, obj: Any, objtype: type | None = None) -> T:  # pyright: ignore[reportExplicitAny, reportAny, reportIncompatibleMethodOverride]
         return super().__get__(obj, objtype)  # pyright: ignore[reportAny]
 
 
-class StringArrayProperty(property):
-    @overload
-    def __get__(self, obj: Any, objtype: type | None = None) -> list[str]: ...  # pyright: ignore[reportExplicitAny, reportAny, reportInconsistentOverload]
-    @override
-    def __get__(self, obj: Any, objtype: type | None = None) -> list[str] | None:  # pyright: ignore[reportExplicitAny, reportAny]
-        return super().__get__(obj, objtype)  # pyright: ignore[reportAny]
-
-
-def string_property(func: Callable[..., str | None]) -> StringProperty:
+def typed_property[T](func: Callable[..., T]) -> Property[T]:
     name = func.__name__
+    parameters = [p for p in inspect.signature(func).parameters if p != "self"]
+    param_hint = get_type_hints(func).get(parameters[0]) if parameters else None
+    assert param_hint is not None, (
+        f"typed_property {name}: parameter must have type hint"
+    )
 
-    def fget(self: "APKBUILD") -> str | None:
+    def is_list_type(annotation: Any) -> bool:  # pyright: ignore[reportExplicitAny, reportAny]
+        origin = getattr(annotation, "__origin__", None)  # pyright: ignore[reportAny]
+        if origin is list:
+            return True
+
+        if isinstance(annotation, types.UnionType):
+            return any(is_list_type(arg) for arg in annotation.__args__)  # pyright: ignore[reportAny]
+
+        return False
+
+    is_list = is_list_type(param_hint)
+    if not is_list:
+        target = param_hint  # pyright: ignore[reportAny]
+
+    elif isinstance(param_hint, types.UnionType):
+        target = next(  # pyright: ignore[reportAny]
+            a
+            for a in param_hint.__args__  # pyright: ignore[reportAny]
+            if getattr(a, "__origin__", None) is list  # pyright: ignore[reportAny]
+        ).__args__[0]
+
+    else:
+        target = param_hint.__args__[0]  # pyright: ignore[reportAny]
+
+    if isinstance(target, types.UnionType):
+        elem_types = tuple(a for a in target.__args__ if a is not type(None))  # pyright: ignore[reportAny]
+
+    else:
+        elem_types = (target,)
+
+    def fget(self: "APKBUILD") -> T:
         value = self.variables.get(name, None)
         assert value is None or isinstance(value, str), (
             f"Cannot get {name}, value is not str"
         )
-        return func(self, value)
-
-    def fset(self: "APKBUILD", value: str | None) -> None:
-        assert value is None or isinstance(value, str), (
-            f"Cannot set {name}, value is not str"
+        return func(
+            self, None if value is None else value.split() if is_list else value
         )
-        self.variables[name] = value
+
+    def fset(self: "APKBUILD", value: T) -> None:
+        if is_list:
+            assert value is None or (
+                isinstance(value, list)
+                and (not value or all(isinstance(x, elem_types) for x in value))  # pyright: ignore[reportUnknownVariableType]
+            ), f"Cannot set {name}, value is not {elem_types}"
+            self.variables[name] = None if value is None else f"\n{'\n'.join(value)}\n"  # pyright: ignore[reportUnknownArgumentType]
+
+        else:
+            assert value is None or isinstance(value, elem_types), (
+                f"Cannot set {name}, value is not {elem_types}"
+            )
+            self.variables[name] = value  # pyright: ignore[reportArgumentType]
 
     def fdel(self: "APKBUILD") -> None:
         del self.variables[name]
 
-    return StringProperty(fget, fset, fdel, func.__doc__)
-
-
-def string_array_property(func: Callable[..., list[str] | None]) -> StringArrayProperty:
-    name = func.__name__
-
-    def fget(self: "APKBUILD") -> list[str] | None:
-        value = self.variables.get(name, None)
-        assert value is None or isinstance(value, str), (
-            f"Cannot get {name}, value is not str"
-        )
-        return func(self, None) if value is None else func(self, value.split())
-
-    def fset(self: "APKBUILD", value: list[str] | None) -> None:
-        assert value is None or (
-            isinstance(value, list)
-            and (not value or not [x for x in value if not isinstance(x, str)])
-        ), f"Cannot set {name}, value is not list[str]"
-        self.variables[name] = None if value is None else f"\n{'\n'.join(value)}\n"
-
-    def fdel(self: "APKBUILD") -> None:
-        del self.variables[name]
-
-    return StringArrayProperty(fget, fset, fdel, func.__doc__)
+    return Property(fget, fset, fdel, func.__doc__)
 
 
 def get_token(value: str, offset: int) -> tuple[int, str]:
@@ -265,7 +279,7 @@ class APKBUILD:
             if not isinstance(prop, property) or prop.fset is None or prop.fget is None:
                 continue
 
-            if isinstance(prop, (StringProperty, StringArrayProperty)):
+            if isinstance(prop, Property):
                 prop.fset(self, prop.fget(self))
 
     @property
@@ -311,10 +325,10 @@ class APKBUILD:
         return "\n".join(lines)
 
     def validate(self) -> Generator[tuple[ErrorType, str]]:
-        if self._upstream_author is None:  # pyright: ignore[reportUnnecessaryComparison]
+        if self._upstream_author is None:
             yield ErrorType.Error, "_upstream_author is not set"
 
-        if self._category is None:  # pyright: ignore[reportUnnecessaryComparison]
+        if self._category is None:
             yield ErrorType.Error, "_category is not set"
 
         pkgdesc_len = len(self.pkgdesc or "")
@@ -333,124 +347,125 @@ class APKBUILD:
                 "_status is not valid, must be 'maintained', 'unmaintained', or 'deprecated'",
             )
 
-    @string_property
+    @typed_property
     def maintainer(self, value: str | None) -> str:
         assert value is not None
         return value
 
-    @string_array_property
+    @typed_property
     def arch(self, value: list[str] | None) -> list[str] | None:
         return value
 
-    @string_array_property
+    @typed_property
     def depends(self, value: list[str] | None) -> list[str] | None:
         return value
 
-    @string_array_property
+    @typed_property
     def depends_dev(self, value: list[str] | None) -> list[str] | None:
         return value
 
-    @string_array_property
+    @typed_property
     def depends_doc(self, value: list[str] | None) -> list[str] | None:
         return value
 
-    @string_array_property
+    @typed_property
     def depends_openrc(self, value: list[str] | None) -> list[str] | None:
         return value
 
-    @string_array_property
+    @typed_property
     def depends_libs(self, value: list[str] | None) -> list[str] | None:
         return value
 
-    @string_array_property
+    @typed_property
     def depends_static(self, value: list[str] | None) -> list[str] | None:
         return value
 
-    @string_array_property
+    @typed_property
     def checkdepends(self, value: list[str] | None) -> list[str] | None:
         return value
 
-    @string_property
+    @typed_property
     def giturl(self, value: str | None) -> str | None:
         return value
 
-    @string_array_property
+    @typed_property
     def install(self, value: list[str] | None) -> list[str] | None:
         return value
 
-    @string_array_property
+    @typed_property
     def install_if(self, value: list[str] | None) -> list[str] | None:
         return value
 
-    @string_property
+    @typed_property
     def license(self, value: str | None) -> str | None:
         return value
 
-    @string_array_property
+    @typed_property
     def makedepends(self, value: list[str] | None) -> list[str] | None:
         return value
 
-    @string_array_property
+    @typed_property
     def makedepends_build(self, value: list[str] | None) -> list[str] | None:
         return value
 
-    @string_array_property
+    @typed_property
     def makedepends_host(self, value: list[str] | None) -> list[str] | None:
         return value
 
-    @string_array_property
+    @typed_property
     def sha256sums(self, value: list[str] | None) -> list[str] | None:
         return value
 
-    @string_array_property
+    @typed_property
     def sha512sums(self, value: list[str] | None) -> list[str] | None:
         return value
 
-    @string_array_property
+    @typed_property
     def options(self, value: list[str] | None) -> list[str] | None:
         return value
 
-    @string_property
+    @typed_property
     def pkgdesc(self, value: str | None) -> str | None:
         return value
 
-    @string_array_property
+    @typed_property
     def pkggroups(self, value: list[str] | None) -> list[str] | None:
         return value
 
-    @string_property
-    def pkgname(self, value: str | None) -> str | None:
+    @typed_property
+    def pkgname(self, value: str | None) -> str:
+        assert value is not None
         return value
 
-    @string_property
+    @typed_property
     def pkgrel(self, value: str | None) -> str | None:
         return value
 
-    @string_array_property
+    @typed_property
     def pkgusers(self, value: list[str] | None) -> list[str] | None:
         return value
 
-    @string_property
+    @typed_property
     def pkgver(self, value: str | None) -> str | None:
         return value
 
-    @string_array_property
+    @typed_property
     def provides(self, value: list[str] | None) -> list[str] | None:
         return value
 
-    @string_property
+    @typed_property
     def provider_priority(self, value: str | None) -> str | None:
         return value
 
-    @string_array_property
+    @typed_property
     def replaces(self, value: list[str] | None) -> list[str] | None:
         return value
 
-    @string_array_property
+    @typed_property
     def replaces_priority(self, value: list[str] | None) -> list[str] | None:
         return value
 
-    @string_array_property
+    @typed_property
     def source(self, value: list[str] | None) -> list[str] | None:
         return value
 
@@ -461,6 +476,7 @@ class APKBUILD:
             return {}
 
         assert isinstance(value, str)
+        assert isinstance(self.pkgname, str)
         subpackage_map: dict[str, str] = {}
         for spec in value.split():
             parts = spec.split(":", 1)
@@ -484,47 +500,47 @@ class APKBUILD:
     def subpackages(self) -> dict[str, str]:
         return {k: self.functions[v] for k, v in self._subpackages.items()}
 
-    @string_array_property
+    @typed_property
     def triggers(self, value: list[str] | None) -> list[str] | None:
         return value
 
-    @string_property
+    @typed_property
     def url(self, value: str | None) -> str | None:
         return value
 
-    @string_property
+    @typed_property
     def langdir(self, value: str | None) -> str | None:
         return value
 
-    @string_property
+    @typed_property
     def pcprefix(self, value: str | None) -> str | None:
         return value
 
-    @string_property
+    @typed_property
     def _upstream_author(self, value: str | None) -> str | None:
         return value
 
-    @string_property
+    @typed_property
     def _category(self, value: str | None) -> str | None:
         return value
 
-    @string_property
+    @typed_property
     def _readmeurl(self, value: str | None) -> str | None:
         return value
 
-    @string_property
+    @typed_property
     def _donateurl(self, value: str | None) -> str | None:
         return value
 
-    @string_property
+    @typed_property
     def _changelogurl(self, value: str | None) -> str | None:
         return value
 
-    @string_property
+    @typed_property
     def _status(self, value: str | None) -> str:
         return value or "maintained"
 
-    @string_property
+    @typed_property
     def sonameprefix(self, value: str | None) -> str | None:
         return value
 

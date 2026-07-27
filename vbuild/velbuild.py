@@ -24,8 +24,7 @@ from .apkbuild import (
     ErrorType,
     put_variables,
     quoted_string,
-    string_array_property,
-    string_property,
+    typed_property,
 )
 
 INSTALL_FUNCTION_NAME_MAP = {
@@ -300,10 +299,10 @@ class VELBUILD(APKBUILD):
         if "package" not in self.functions:
             yield ErrorType.Error, "package function is not defined"
 
-        if self.upstream_author is None:  # pyright: ignore[reportUnnecessaryComparison]
+        if self.upstream_author is None:
             yield ErrorType.Error, "upstream_author is not set"
 
-        if self.category is None:  # pyright: ignore[reportUnnecessaryComparison]
+        if self.category is None:
             yield ErrorType.Error, "category is not set"
 
         try:
@@ -346,7 +345,7 @@ class VELBUILD(APKBUILD):
         if self.maintainer is None:  # pyright: ignore[reportUnnecessaryComparison]
             yield ErrorType.Error, "maintainer is not set"
 
-        if self.sha256sums is not None:  # pyright: ignore[reportUnnecessaryComparison]
+        if self.sha256sums is not None:
             yield ErrorType.Error, "sha256sums is not supported by vbuild"
 
         if self.trigger is not None and not self.triggers:
@@ -452,7 +451,7 @@ class VELBUILD(APKBUILD):
 
         return subpackages
 
-    @string_property
+    @typed_property
     @override
     def install(self, _: list[str] | None) -> str:
         data: list[str] = []
@@ -498,31 +497,31 @@ class VELBUILD(APKBUILD):
     def trigger(self) -> str | None:
         return self._getsrc("trigger")
 
-    @string_property
+    @typed_property
     def category(self, value: str | None) -> str | None:
         return value
 
-    @string_property
+    @typed_property
     def readmeurl(self, value: str | None) -> str | None:
         return value
 
-    @string_property
+    @typed_property
     def donateurl(self, value: str | None) -> str | None:
         return value
 
-    @string_property
+    @typed_property
     def changelogurl(self, value: str | None) -> str | None:
         return value
 
-    @string_property
+    @typed_property
     def status(self, value: str | None) -> str | None:
         return value
 
-    @string_property
+    @typed_property
     def upstream_author(self, value: str | None) -> str | None:
         return value
 
-    @string_array_property
+    @typed_property
     def systemdunits(self, value: list[str] | None) -> list[str]:
         return value or []
 
@@ -539,7 +538,7 @@ class VELBUILD(APKBUILD):
 
         return None
 
-    @string_array_property
+    @typed_property
     @override
     def options(self, value: list[str] | None) -> list[str]:
         options = list(
