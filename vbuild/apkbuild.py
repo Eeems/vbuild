@@ -85,8 +85,8 @@ class Property[T](property):
 def typed_property[T](func: Callable[..., T]) -> Property[T]:
     name = func.__name__
     parameters = [p for p in inspect.signature(func).parameters if p != "self"]
-    param_hint = get_type_hints(func).get(parameters[0]) if parameters else None
-    assert param_hint is not None, (
+    annotation = get_type_hints(func).get(parameters[0]) if parameters else None
+    assert annotation is not None, (
         f"typed_property {name}: parameter must have type hint"
     )
 
@@ -100,25 +100,25 @@ def typed_property[T](func: Callable[..., T]) -> Property[T]:
 
         return False
 
-    is_list = is_list_type(param_hint)
+    is_list = is_list_type(annotation)
     if not is_list:
-        target = param_hint  # pyright: ignore[reportAny]
+        target = annotation  # pyright: ignore[reportAny]
 
-    elif isinstance(param_hint, types.UnionType):
+    elif isinstance(annotation, types.UnionType):
         target = next(  # pyright: ignore[reportAny]
             a
-            for a in param_hint.__args__  # pyright: ignore[reportAny]
+            for a in annotation.__args__  # pyright: ignore[reportAny]
             if getattr(a, "__origin__", None) is list  # pyright: ignore[reportAny]
         ).__args__[0]
 
     else:
-        target = param_hint.__args__[0]  # pyright: ignore[reportAny]
+        target = annotation.__args__[0]  # pyright: ignore[reportAny]
 
     if isinstance(target, types.UnionType):
-        elem_types = tuple(a for a in target.__args__ if a is not type(None))  # pyright: ignore[reportAny]
+        allowed_types = tuple(a for a in target.__args__ if a is not type(None))  # pyright: ignore[reportAny]
 
     else:
-        elem_types = (target,)
+        allowed_types = (target,)
 
     def fget(self: "APKBUILD") -> T:
         value = self.variables.get(name, None)
@@ -133,13 +133,13 @@ def typed_property[T](func: Callable[..., T]) -> Property[T]:
         if is_list:
             assert value is None or (
                 isinstance(value, list)
-                and (not value or all(isinstance(x, elem_types) for x in value))  # pyright: ignore[reportUnknownVariableType]
-            ), f"Cannot set {name}, value is not {elem_types}"
+                and (not value or all(isinstance(x, allowed_types) for x in value))  # pyright: ignore[reportUnknownVariableType]
+            ), f"Cannot set {name}, value is not {allowed_types}"
             self.variables[name] = None if value is None else f"\n{'\n'.join(value)}\n"  # pyright: ignore[reportUnknownArgumentType]
 
         else:
-            assert value is None or isinstance(value, elem_types), (
-                f"Cannot set {name}, value is not {elem_types}"
+            assert value is None or isinstance(value, allowed_types), (
+                f"Cannot set {name}, value is not {allowed_types}"
             )
             self.variables[name] = value  # pyright: ignore[reportArgumentType]
 
