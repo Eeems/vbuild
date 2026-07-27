@@ -60,11 +60,11 @@ A function containing the contents of $pkgname.post-os-upgrade.See [vellum-dev/v
 
 #### trigger
 
-A function containing the contents of $pkgname.trigger. See [APKBUILD(5)](https://man.archlinux.org/man/APKBUILD.5.en#Optional_Variables) for more information. This script runs when monitored files or directories specified in `triggers` variable change. Must be used together with the `triggers` variable.
+A function containing the contents of `$pkgname.trigger`. See [APKBUILD(5)](https://man.archlinux.org/man/APKBUILD.5.en#Optional_Variables) for more information. This script runs when monitored directories specified in `triggers` variable change. Must be used together with the `triggers` variable.
 
 #### triggers
 
-A string array of file paths to monitor for changes. See [APKBUILD(5)](https://man.archlinux.org/man/APKBUILD.5.en#Optional_Variables) for more information. Must be used together with the `trigger` function.
+A string array of directory paths to monitor for changes. See [APKBUILD(5)](https://man.archlinux.org/man/APKBUILD.5.en#Optional_Variables) for more information. Must be used together with the `trigger` function.
 
 #### systemdunits
 
