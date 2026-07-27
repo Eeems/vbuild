@@ -5,7 +5,11 @@ from collections.abc import (
     Generator,
 )
 from enum import Enum
-from typing import cast
+from typing import (
+    Any,
+    overload,
+    override,
+)
 
 from . import bash
 
@@ -71,14 +75,22 @@ class ErrorType(Enum):
 
 
 class StringProperty(property):
-    pass
+    @overload
+    def __get__(self, obj: Any, objtype: type | None = None) -> str: ...  # pyright: ignore[reportExplicitAny, reportAny, reportInconsistentOverload]
+    @override
+    def __get__(self, obj: Any, objtype: type | None = None) -> str | None:  # pyright: ignore[reportExplicitAny, reportAny]  # noqa: F821
+        return super().__get__(obj, objtype)  # pyright: ignore[reportAny]
 
 
 class StringArrayProperty(property):
-    pass
+    @overload
+    def __get__(self, obj: Any, objtype: type | None = None) -> list[str]: ...  # pyright: ignore[reportExplicitAny, reportAny, reportInconsistentOverload]
+    @override
+    def __get__(self, obj: Any, objtype: type | None = None) -> list[str] | None:  # pyright: ignore[reportExplicitAny, reportAny]  # noqa: F821
+        return super().__get__(obj, objtype)  # pyright: ignore[reportAny]
 
 
-def string_property(func: Callable[..., str | None]) -> property:
+def string_property(func: Callable[..., str | None]) -> StringProperty:
     name = func.__name__
 
     def fget(self: "APKBUILD") -> str | None:
@@ -100,7 +112,7 @@ def string_property(func: Callable[..., str | None]) -> property:
     return StringProperty(fget, fset, fdel, func.__doc__)
 
 
-def string_array_property(func: Callable[..., list[str] | None]) -> property:
+def string_array_property(func: Callable[..., list[str] | None]) -> StringArrayProperty:
     name = func.__name__
 
     def fget(self: "APKBUILD") -> list[str] | None:
@@ -299,23 +311,23 @@ class APKBUILD:
         return "\n".join(lines)
 
     def validate(self) -> Generator[tuple[ErrorType, str]]:
-        if self._upstream_author is None:  # pyright: ignore[reportAny]
+        if self._upstream_author is None:  # pyright: ignore[reportUnnecessaryComparison]
             yield ErrorType.Error, "_upstream_author is not set"
 
-        if self._category is None:  # pyright: ignore[reportAny]
+        if self._category is None:  # pyright: ignore[reportUnnecessaryComparison]
             yield ErrorType.Error, "_category is not set"
 
-        pkgdesc_len = len(self.pkgdesc)  # pyright: ignore[reportAny]
+        pkgdesc_len = len(self.pkgdesc or "")
         if pkgdesc_len >= 128:
             yield (
                 ErrorType.Error,
                 f"pkgdesc is too long ({pkgdesc_len} chars, must be <128)",
             )
 
-        if self.maintainer is None:  # pyright: ignore[reportAny]
+        if self.maintainer is None:  # pyright: ignore[reportUnnecessaryComparison]
             yield ErrorType.Error, "maintainer is not set"
 
-        if self._status not in (None, "maintained", "unmaintained", "deprecated"):  # pyright: ignore[reportAny]
+        if self._status not in (None, "maintained", "unmaintained", "deprecated"):
             yield (
                 ErrorType.Error,
                 "_status is not valid, must be 'maintained', 'unmaintained', or 'deprecated'",
@@ -450,17 +462,16 @@ class APKBUILD:
 
         assert isinstance(value, str)
         subpackage_map: dict[str, str] = {}
-        pkgname = cast(str, self.pkgname)
         for spec in value.split():
             parts = spec.split(":", 1)
             if len(parts) == 2:
                 pass
 
             elif (
-                parts[0].startswith(f"{pkgname}-")
-                and "-" not in parts[0][len(pkgname) + 1 :]
+                parts[0].startswith(f"{self.pkgname}-")
+                and "-" not in parts[0][len(self.pkgname) + 1 :]
             ):
-                parts.append(parts[0][len(pkgname) + 1 :])
+                parts.append(parts[0][len(self.pkgname) + 1 :])
 
             else:
                 parts.append(parts[0])

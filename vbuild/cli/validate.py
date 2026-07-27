@@ -37,6 +37,6 @@ def command(args: Namespace) -> int:
         if type == ErrorType.Error:
             fail = True
 
-        print(f">>> {ErrorType.string(type).upper()}: {package.pkgname}: {msg}")  # pyright: ignore[reportAny]
+        print(f">>> {ErrorType.string(type).upper()}: {package.pkgname}: {msg}")
 
     return 1 if fail else 0

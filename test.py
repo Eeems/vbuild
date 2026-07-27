@@ -147,22 +147,22 @@ _assert("\"'my-custom-image:latest'\" in velbuild.image", lambda: velbuild.image
 _raises('setattr(velbuild, "image", 1)', AssertionError)
 _assert(
     'set(velbuild.options) == {"!check", "!fhs", "!strip", "!tracedeps"}',
-    lambda: set(velbuild.options),  # pyright: ignore[reportAny]
+    lambda: set(velbuild.options),
 )
 velbuild.variables["options"] = "check"
 _assert(
     'set(velbuild.options) == {"!fhs", "!strip", "!tracedeps"}',
-    lambda: set(velbuild.options),  # pyright: ignore[reportAny]
+    lambda: set(velbuild.options),
 )
 velbuild.variables["options"] += "\nfhs"
 _assert(
     'set(velbuild.options) == {"!strip", "!tracedeps"}',
-    lambda: set(velbuild.options),  # pyright: ignore[reportAny]
+    lambda: set(velbuild.options),
 )
 velbuild.variables["options"] += "\nstrip"
-_assert('set(velbuild.options) == {"!tracedeps"}', lambda: set(velbuild.options))  # pyright: ignore[reportAny]
+_assert('set(velbuild.options) == {"!tracedeps"}', lambda: set(velbuild.options))
 velbuild.variables["options"] += "\ntracedeps"
-_assert("not velbuild.options", lambda: set(velbuild.options))  # pyright: ignore[reportAny]
+_assert("not velbuild.options", lambda: set(velbuild.options))
 velbuild.pkgname = "test-pkg"
 velbuild.pkgver = "1.0"
 velbuild.pkgrel = "0"

@@ -25,16 +25,16 @@ def command(args: Namespace) -> int:
         return 1
 
     package = parse(filepath)
-    if package.pkgname is None:  # pyright: ignore[reportAny]
+    if package.pkgname is None:  # pyright: ignore[reportUnnecessaryComparison]
         raise Exception("pkgname is missing")
 
-    print(f">>> {package.pkgname}: Generating APKBUILD")  # pyright: ignore[reportAny]
+    print(f">>> {package.pkgname}: Generating APKBUILD")
     fail = False
     for type, msg in package.validate():
         if type == ErrorType.Error:
             fail = True
 
-        print(f">>> {ErrorType.string(type).upper()}: {package.pkgname}: {msg}")  # pyright: ignore[reportAny]
+        print(f">>> {ErrorType.string(type).upper()}: {package.pkgname}: {msg}")
 
     if fail:
         return 1
