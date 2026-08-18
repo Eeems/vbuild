@@ -48,6 +48,7 @@ VELBUILD_VARIABLE_MAP = {
     "donateurl": "_donateurl",
     "changelogurl": "_changelogurl",
     "status": "_status",
+    "systemdunits": "_systemdunits",
 }
 
 INSTALL_FUNCTION_NAMES = set(INSTALL_FUNCTION_NAME_MAP.keys())
