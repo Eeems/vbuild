@@ -197,7 +197,7 @@ class VELBUILD(APKBUILD):
                     )
                     + " \\\n"
                     + f"{tab * 2}{runtime} run \\\n"
-                    + f"{tab * 3}--rm \\\n"
+                    + f"{tab * 2}--rm \\\n"
                     + f"{tab * 2}--volume=$VBUILD_WORKDIR:/work \\\n"
                     + f"{tab * 2}--volume=$VBUILD_DISTFILES:/var/cache/distfiles:ro \\\n"
                     + (" \\\n".join(f"{tab * 2}-e {x}" for x in keys))
