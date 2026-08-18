@@ -191,7 +191,7 @@ class VELBUILD(APKBUILD):
                     + f"{tab}set +e\n"
                     + (
                         f" \\\n{tab}".join(
-                            f'{tab}{x}="${VELBUILD_VARIABLE_MAP[x] if x in VELBUILD_VARIABLE_MAP else x}"'
+                            f'{tab}{x}="${VELBUILD_VARIABLE_MAP.get(x, x)}"'
                             for x in keys
                         )
                     )
