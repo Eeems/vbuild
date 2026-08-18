@@ -311,7 +311,9 @@ jobs:
           script: |
             cd $srcdir
             if [[ "${{ matrix.libc }}" == "musl" ]];then
-              apk add --no-cache bash
+              apk add --no-cache \
+                bash \
+                patchelf
             fi
             if [ -f tests/${{ matrix.path }}/validate.sh ];then
               tests/${{ matrix.path }}/validate.sh
