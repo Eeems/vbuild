@@ -286,13 +286,28 @@ class VELBUILD(APKBUILD):
                 if "!strip" not in self.options:
                     script += (
                         "\n_ret=$?\n"
-                        + 'find "$srcdir" -type f -print0 | \n'
-                        + "  xargs -0 sh -c '\n"
-                        + "    for f;do\n"
-                        + '      file -b "$f" | grep -q ELF && printf "%s\\0" "$f"\n'
+                        + 'if [ "$CARCH" = "noarch" ]; then\n'
+                        + "    exit $_ret\n"
+                        + "fi\n"
+                        + "STRIP=${STRIP:-${CROSS_COMPILE}strip}\n"
+                        + "OBJDUMP=${OBJDUMP:-${CROSS_COMPILE}objdump}\n"
+                        + 'formats=$("$STRIP" --info |\n'
+                        + "  sed -n 's/^\\([a-z0-9][a-z0-9._-]*\\)$/\\1/p' |\n"
+                        + "  tr '\\n' ' ')\n"
+                        + "export OBJDUMP formats\n"
+                        + 'find "$srcdir" -type f -print0 |\n'
+                        + "  xargs -0 -r sh -c '\n"
+                        + "    for f do\n"
+                        + '      file -b "$f" | grep -q ELF || continue\n'
+                        + '      fmt=$("$OBJDUMP" -f "$f" 2>/dev/null |\n'
+                        + '        sed -n "s/.*file format \\([a-z0-9][a-z0-9._-]*\\).*/\\1/p" |\n'
+                        + "        head -1)\n"
+                        + '      case " $formats " in\n'
+                        + '        *" $fmt "*) printf "%s\\0" "$f" ;;\n'
+                        + "      esac\n"
                         + "    done\n"
-                        + "  ' _ | \n"
-                        + '  xargs -0 -r "${STRIP:-strip}" --strip-unneeded\n'
+                        + "  ' sh |\n"
+                        + '  xargs -0 -r "$STRIP" --strip-unneeded\n'
                         + "exit $_ret\n"
                     )
 

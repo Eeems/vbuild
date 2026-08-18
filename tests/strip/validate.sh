@@ -13,7 +13,7 @@ if ! grep -Fq 'find "$srcdir" -type f -print0' test-strip.build; then
 	echo "Missing srcdir strip snippet in build script"
 	exit 1
 fi
-if ! grep -Fq 'xargs -0 -r "${STRIP:-strip}" --strip-unneeded' test-strip.build; then
+if ! grep -Fq 'xargs -0 -r "$STRIP" --strip-unneeded' test-strip.build; then
 	echo "Missing strip command"
 	exit 1
 fi
