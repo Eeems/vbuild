@@ -20,11 +20,13 @@ hello-copy.c
 image="ghcr.io/eeems/vbuild-builder:latest"
 
 build() {
+	set -e
 	cc -O2 -o "$srcdir/hello" "$srcdir/hello.c"
 	cc -O2 -o "$srcdir/hello-copy" "$srcdir/hello-copy.c"
 }
 
 package() {
+set -e
 	install -Dm755 "$srcdir/hello" "$pkgdir/usr/bin/hello"
 	install -Dm644 "$srcdir/hello-copy.c" "$pkgdir/usr/share/test-strip/hello-copy.c"
 }
@@ -36,6 +38,7 @@ subpackages="
 test_strip_sub() {
 	pkgdesc="Subpackage with its own ELF"
 	package() {
+		set -e
 		install -Dm755 "$srcdir/hello-copy" "$subpkgdir/usr/bin/hello-copy"
 	}
 }
