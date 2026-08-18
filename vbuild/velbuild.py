@@ -250,7 +250,7 @@ class VELBUILD(APKBUILD):
                     "\n".join(
                         [
                             header,
-                            f"{name}() {{\n{src}\n}}\n{name}" if src else "",
+                            f'{name}() {{\n{src}\n}}\n{name} "$@"' if src else "",
                             footer or "",
                         ]
                     )
@@ -267,7 +267,7 @@ class VELBUILD(APKBUILD):
             src = self.functions.get("build", None)
             if src is not None:
                 with open(os.path.join(path, f"{self.pkgname}.build"), "w") as f:
-                    _ = f.write(f"#!/bin/sh\nbuild() {{\n{src}\n}}\nbuild\n")
+                    _ = f.write(f"#!/bin/sh\nbuild() {{\n{src}\n}}\nbuild \"$@\"\n")
 
         for name, body in super().subpackages.items():
             sub_vars, sub_funcs = bash.parse(body, APKBUILD_AUTOMATIC_VARIABLES)
@@ -302,7 +302,7 @@ class VELBUILD(APKBUILD):
                         "\n".join(
                             [
                                 header,
-                                f"{lifecycle_name}() {{\n{src}\n}}\n{lifecycle_name}",
+                                f'{lifecycle_name}() {{\n{src}\n}}\n{lifecycle_name} "$@"',
                                 footer or "",
                             ]
                         )
