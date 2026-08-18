@@ -105,11 +105,11 @@ class VELBUILD(APKBUILD):
             ):
                 continue
 
-            if name in ("systemdunits", "image", "options"):
-                continue
-
             if name in VELBUILD_VARIABLE_MAP:
                 name = VELBUILD_VARIABLE_MAP[name]  # noqa: PLW2901
+
+            if name in ("systemdunits", "image", "options"):
+                continue
 
             if isinstance(value, str):
                 lines.append(f"{name}={quoted_string(value)}")
