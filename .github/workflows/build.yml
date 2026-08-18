@@ -313,6 +313,7 @@ jobs:
             if [[ "${{ matrix.libc }}" == "musl" ]];then
               apk add --no-cache \
                 bash \
+                binutils \
                 patchelf
             fi
             if [ -f tests/${{ matrix.path }}/validate.sh ];then
