@@ -285,7 +285,7 @@ class VELBUILD(APKBUILD):
                 script = f'#!/bin/sh\nbuild() {{\n{src}\n}}\nbuild "$@"'
                 if "!strip" not in self.options:
                     script += (
-                        "_ret=$?\n"
+                        "\n_ret=$?\n"
                         + 'find "$srcdir" -type f -print0 | \n'
                         + "  while IFS= read -r -d '' f; do\n"
                         + '    file -b "$f" | grep -q ELF && printf \'%s\\0\' "$f"\n'
