@@ -284,15 +284,15 @@ class VELBUILD(APKBUILD):
             if src is not None:
                 script = f'#!/bin/sh\nbuild() {{\n{src}\n}}\nbuild "$@"'
                 if "!strip" not in self.options:
-                    script += """
-_ret=$?
-find "$srcdir" -type f -print0 |
-  while IFS= read -r -d '' f; do
-    file -b "$f" | grep -q ELF && printf '%s\\0' "$f"
-  done |
-  xargs -0 -r "${STRIP:-strip}" --strip-unneeded
-exit $_ret
-"""
+                    script += (
+                        "_ret=$?"
+                        + 'find "$srcdir" -type f -print0 |'
+                        + "  while IFS= read -r -d '' f; do"
+                        + '    file -b "$f" | grep -q ELF && printf \'%s\\0\' "$f"'
+                        + "  done |"
+                        + '  xargs -0 -r "${STRIP:-strip}" --strip-unneeded'
+                        + "exit $_ret"
+                    )
 
                 with open(os.path.join(path, f"{self.pkgname}.build"), "w") as f:
                     _ = f.write(script)
