@@ -1,0 +1,43 @@
+maintainer="Nathaniel van Diepen <eeems@eeems.email>"
+pkgname=test-strip
+pkgver=1.0
+pkgrel=0
+pkgdesc="Test strip support"
+url="https://github.com/Eeems/vbuild"
+upstream_author="Eeems"
+category="utilities"
+arch="x86_64"
+license="MIT"
+options="
+strip
+"
+
+source="
+hello.c
+hello-copy.c
+"
+
+build() {
+	cc -O2 -o "$srcdir/hello" "$srcdir/hello.c"
+	cc -O2 -o "$srcdir/hello-copy" "$srcdir/hello-copy.c"
+}
+
+package() {
+	install -Dm755 "$srcdir/hello" "$pkgdir/usr/bin/hello"
+	install -Dm644 "$srcdir/hello-copy.c" "$pkgdir/usr/share/test-strip/hello-copy.c"
+}
+
+subpackages="
+	test-strip-sub:test_strip_sub
+"
+
+test_strip_sub() {
+	pkgdesc="Subpackage with its own ELF"
+	package() {
+		install -Dm755 "$srcdir/hello-copy" "$subpkgdir/usr/bin/hello-copy"
+	}
+}
+sha512sums='f8d7f3ae7412b236ca17ab2d35c2c10fa60a8313814e61027015523b8ba4cf502fe2ccf89cc4bdaba7cf8c2073c0c9498df5ec16f2a8c0de0e424f3ce18a064b
+hello.c
+435e77884c66d72ac7b89112302b2683bab20fa765ec5c319d9b00a904edd6ba5e1f6b7ae073fe7f328bca9b336669d0340eabe56c48fe1035bb937a8dfcc45e
+hello-copy.c'

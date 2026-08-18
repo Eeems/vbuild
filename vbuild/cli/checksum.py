@@ -76,6 +76,9 @@ def command(args: Namespace) -> int:
             lines_out.append(line)
 
     with open(velbuild_path, "w") as f:
+        if lines_out and not lines_out[-1].endswith("\n"):
+            _ = f.write("\n")
+
         f.writelines(lines_out)
         _ = f.write(f"sha512sums={shlex.quote('\n'.join(apkbuild.sha512sums))}")
 
