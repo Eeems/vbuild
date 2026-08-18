@@ -19,6 +19,18 @@ if ! grep -Fq 'postinstall() {' entware-rc.post-upgrade; then
   echo "postinstall() method missing from entware-rc.post-upgrade"
   exit 1
 fi
+if ! grep -Fq 'postinstall() {' entware-rc.post-install; then
+  echo "postinstall() method missing from entware-rc.post-install"
+  exit 1
+fi
+if ! grep -Fq 'postosupgrade() {' entware-rc.post-os-upgrade; then
+  echo "postosupgrade() method missing from entware-rc.post-os-upgrade"
+  exit 1
+fi
+if ! grep -Fq 'predeinstall() {' entware-rc.pre-deinstall; then
+  echo "predeinstall() method missing from entware-rc.pre-deinstall"
+  exit 1
+fi
 
 exists entware-rc.build
 # shellcheck disable=SC2016
@@ -26,7 +38,7 @@ if ! grep -Fq 'sh $(pwd)/$pkgname.build' APKBUILD; then
   echo "pkgname.build invocation missing from APKBUILD"
   exit 1
 fi
-if ! grep -Fq '#!/bin/sh' entware-rc.build; then
-  echo "shebang missing from entware-rc.build"
+if ! grep -Fq 'build() {' entware-rc.build; then
+  echo "build() function missing from entware-rc.build"
   exit 1
 fi
