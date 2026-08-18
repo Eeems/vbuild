@@ -41,6 +41,15 @@ INSTALL_FUNCTION_NAME_MAP = {
     "postdeinstall": "post-deinstall",
     "postosupgrade": "post-os-upgrade",
 }
+VELBUILD_VARIABLE_MAP = {
+    "upstream_author": "_upstream_author",
+    "category": "_category",
+    "readmeurl": "_readmeurl",
+    "donateurl": "_donateurl",
+    "changelogurl": "_changelogurl",
+    "status": "_status",
+    "systemdunits": "_systemdunits",
+}
 
 INSTALL_FUNCTION_NAMES = set(INSTALL_FUNCTION_NAME_MAP.keys())
 
@@ -96,18 +105,11 @@ class VELBUILD(APKBUILD):
             ):
                 continue
 
+            if name in VELBUILD_VARIABLE_MAP:
+                name = VELBUILD_VARIABLE_MAP[name]  # noqa: PLW2901
+
             if name in ("systemdunits", "image", "options"):
                 continue
-
-            if name in (
-                "upstream_author",
-                "category",
-                "readmeurl",
-                "donateurl",
-                "changelogurl",
-                "status",
-            ):
-                name = f"_{name}"  # noqa: PLW2901
 
             if isinstance(value, str):
                 lines.append(f"{name}={quoted_string(value)}")
@@ -177,22 +179,32 @@ class VELBUILD(APKBUILD):
                 continue
 
             elif name == "build" and self.image is not None:
+                keys = sorted(
+                    set(APKBUILD_VARIABLES + list(variables.keys()))
+                    - bash.DEFAULT_VARIABLE_NAMES
+                )
                 value = (  # noqa: PLW2901
                     f"\n{tab}set -e\n"
-                    + f"{tab}image() {{{self.image}}}\n"
+                    + f"{tab}image() {{{self.image}{tab}}}\n"
                     + f"{tab}image=$(image)\n"
                     + f"{tab}unset -f image\n"
                     + f"{tab}set +e\n"
-                    + (" \\\n".join(f'{tab} {x}="${x}"' for x in APKBUILD_VARIABLES))
+                    + (
+                        f" \\\n{tab}".join(
+                            f'{tab}{x}="${VELBUILD_VARIABLE_MAP.get(x, x)}"'
+                            for x in keys
+                        )
+                    )
                     + " \\\n"
-                    + f"{tab}{runtime} run --rm \\\n"
-                    + f"{tab}  --volume=$VBUILD_WORKDIR:/work \\\n"
-                    + f"{tab}  --volume=$VBUILD_DISTFILES:/var/cache/distfiles:ro \\\n"
-                    + (" \\\n".join(f"{tab}  -e {x}" for x in APKBUILD_VARIABLES))
+                    + f"{tab * 2}{runtime} run \\\n"
+                    + f"{tab * 2}--rm \\\n"
+                    + f"{tab * 2}--volume=$VBUILD_WORKDIR:/work \\\n"
+                    + f"{tab * 2}--volume=$VBUILD_DISTFILES:/var/cache/distfiles:ro \\\n"
+                    + (" \\\n".join(f"{tab * 2}-e {x}" for x in keys))
                     + " \\\n"
-                    + f'{tab}  --workdir "$builddir" \\\n'
-                    + f"{tab}  $image \\\n"
-                    + f"{tab}  sh $(pwd)/$pkgname.build\n"
+                    + f'{tab * 2}--workdir "$builddir" \\\n'
+                    + f"{tab * 2}$image \\\n"
+                    + f"{tab * 2}sh $(pwd)/$pkgname.build\n"
                     + f"{tab}_ret=$?\n"
                     + f"{tab}if [ $_ret -ne 0 ];then\n"
                     + f"{tab}{tab}exit $_ret\n"
@@ -267,7 +279,7 @@ class VELBUILD(APKBUILD):
             src = self.functions.get("build", None)
             if src is not None:
                 with open(os.path.join(path, f"{self.pkgname}.build"), "w") as f:
-                    _ = f.write(f"#!/bin/sh\nbuild() {{\n{src}\n}}\nbuild \"$@\"\n")
+                    _ = f.write(f'#!/bin/sh\nbuild() {{\n{src}\n}}\nbuild "$@"\n')
 
         for name, body in super().subpackages.items():
             sub_vars, sub_funcs = bash.parse(body, APKBUILD_AUTOMATIC_VARIABLES)
