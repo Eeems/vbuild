@@ -1,5 +1,8 @@
 import os
-from collections.abc import Callable, Generator
+from collections.abc import (
+    Callable,
+    Generator,
+)
 from inspect import cleandoc
 from typing import (
     cast,
@@ -180,13 +183,6 @@ class VELBUILD(APKBUILD):
                     + f"{tab}image=$(image)\n"
                     + f"{tab}unset -f image\n"
                     + f"{tab}set +e\n"
-                    + f'{tab}script="$(tr -dc A-Za-z0-9 </dev/urandom | head -c 13).build.sh"\n'
-                    + f"{tab}cat > \"$script\" << 'VBUILD_BUILD_SCRIPT'\n"
-                    + "#!/bin/sh\n"
-                    + "cd /work\n"
-                    + f"{value}\n"
-                    + "VBUILD_BUILD_SCRIPT\n"
-                    + f"{tab}set +e\n"
                     + (" \\\n".join(f'{tab} {x}="${x}"' for x in APKBUILD_VARIABLES))
                     + " \\\n"
                     + f"{tab}{runtime} run --rm \\\n"
@@ -196,9 +192,8 @@ class VELBUILD(APKBUILD):
                     + " \\\n"
                     + f'{tab}  --workdir "$builddir" \\\n'
                     + f"{tab}  $image \\\n"
-                    + f"{tab}  sh $(pwd)/$script\n"
+                    + f"{tab}  sh $(pwd)/$pkgname.build\n"
                     + f"{tab}_ret=$?\n"
-                    + f'{tab}rm -f "$script"\n'
                     + f"{tab}if [ $_ret -ne 0 ];then\n"
                     + f"{tab}{tab}exit $_ret\n"
                     + f"{tab}fi\n"
@@ -251,7 +246,15 @@ class VELBUILD(APKBUILD):
                 os.path.join(path, f"{self.pkgname}.{functionName}"),
                 "w",
             ) as f:
-                _ = f.write("\n".join([header, src or "", footer or ""]))
+                _ = f.write(
+                    "\n".join(
+                        [
+                            header,
+                            f'{name}() {{\n{src}\n}}\n{name} "$@"' if src else "",
+                            footer or "",
+                        ]
+                    )
+                )
 
         if self.trigger is not None:
             with open(
@@ -259,6 +262,12 @@ class VELBUILD(APKBUILD):
                 "w",
             ) as f:
                 _ = f.write("#!/bin/sh\n" + self.trigger)
+
+        if self.image is not None:
+            src = self.functions.get("build", None)
+            if src is not None:
+                with open(os.path.join(path, f"{self.pkgname}.build"), "w") as f:
+                    _ = f.write(f"#!/bin/sh\nbuild() {{\n{src}\n}}\nbuild \"$@\"\n")
 
         for name, body in super().subpackages.items():
             sub_vars, sub_funcs = bash.parse(body, APKBUILD_AUTOMATIC_VARIABLES)
@@ -289,7 +298,15 @@ class VELBUILD(APKBUILD):
                     os.path.join(path, f"{name}.{lifecycle_file}"),
                     "w",
                 ) as f:
-                    _ = f.write("\n".join([header, src, footer or ""]))
+                    _ = f.write(
+                        "\n".join(
+                            [
+                                header,
+                                f'{lifecycle_name}() {{\n{src}\n}}\n{lifecycle_name} "$@"',
+                                footer or "",
+                            ]
+                        )
+                    )
 
             if "trigger" in sub_funcs:
                 with open(

@@ -44,3 +44,15 @@ if ! grep -Fq 'postinstall() {' entware-rc.post-upgrade; then
   echo "postinstall() method missing from entware-rc.post-upgrade"
   exit 1
 fi
+if ! grep -Fq 'postinstall() {' entware-rc.post-install; then
+  echo "postinstall() method missing from entware-rc.post-install"
+  exit 1
+fi
+if ! grep -Fq 'postosupgrade() {' entware-rc.post-os-upgrade; then
+  echo "postosupgrade() method missing from entware-rc.post-os-upgrade"
+  exit 1
+fi
+if ! grep -Fq 'predeinstall() {' entware-rc.pre-deinstall; then
+  echo "predeinstall() method missing from entware-rc.pre-deinstall"
+  exit 1
+fi

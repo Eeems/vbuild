@@ -147,6 +147,18 @@ if ! grep -Fq 'postosupgrade() {' webserver-remote.post-install; then
   echo "postosupgrade() method missing from webserver-remote.post-install"
   exit 1
 fi
+if ! grep -Fq 'postinstall() {' webserver-remote.post-install; then
+  echo "postinstall() method missing from webserver-remote.post-install"
+  exit 1
+fi
+if ! grep -Fq 'postinstall() {' xovi-extensions.post-install; then
+  echo "postinstall() method missing from xovi-extensions.post-install"
+  exit 1
+fi
+if ! grep -Fq 'postinstall() {' qt-resource-rebuilder.post-install; then
+  echo "postinstall() method missing from qt-resource-rebuilder.post-install"
+  exit 1
+fi
 if ! tar tf dist/aarch64/webserver-remote-17.0.0-r4.apk 2>&1 | grep -q .post-install; then
   echo ".post-install file missing from webserver-remote-17.0.0-r4.apk"
   exit 1

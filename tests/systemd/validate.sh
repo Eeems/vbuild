@@ -96,3 +96,9 @@ if ! grep -Fq 'SKIP_SYSTEMD_HANDLING=1' test-systemd-empty.post-upgrade; then
 	echo "SKIP_SYSTEMD_HANDLING=1 missing from test-systemd-empty.post-upgrade"
 	exit 1
 fi
+
+# Check lifecycle methods exist
+if ! grep -Fq 'postinstall() {' test-systemd-empty.post-install; then
+	echo "postinstall() method missing from test-systemd-empty.post-install"
+	exit 1
+fi
