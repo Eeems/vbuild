@@ -12,7 +12,7 @@ if ! grep -Fq 'find "$srcdir" -type f -print0' APKBUILD; then
 	echo "Missing srcdir strip snippet in build()"
 	exit 1
 fi
-if ! grep -Fq 'xargs -0 "${STRIP:-strip}" --strip-unneeded' APKBUILD; then
+if ! grep -Fq 'xargs -0 -r "${STRIP:-strip}" --strip-unneeded' APKBUILD; then
 	echo "Missing strip command"
 	exit 1
 fi
@@ -20,12 +20,23 @@ if ! grep -Fq '!strip' APKBUILD; then
 	echo "Missing !strip option"
 	exit 1
 fi
+exists pkg/test-strip/usr/bin/hello
+if ! readelf -S pkg/test-strip/usr/bin/hello; then
+	echo "Unable to inspect hello binary"
+	exit 1
+fi
 if readelf -S pkg/test-strip/usr/bin/hello | grep -q '\.symtab'; then
 	echo "hello is not stripped"
 	exit 1
 fi
+exists pkg/test-strip/usr/share/test-strip/hello-copy.c
 if ! grep -q 'hello' pkg/test-strip/usr/share/test-strip/hello-copy.c; then
 	echo "Non-ELF file missing"
+	exit 1
+fi
+exists pkg/test-strip-sub/usr/bin/hello-copy
+if ! readelf -S pkg/test-strip-sub/usr/bin/hello-copy; then
+	echo "Unable to inspect hello-copy binary"
 	exit 1
 fi
 if readelf -S pkg/test-strip-sub/usr/bin/hello-copy | grep -q '\.symtab'; then

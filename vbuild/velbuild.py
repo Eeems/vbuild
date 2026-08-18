@@ -230,7 +230,7 @@ class VELBUILD(APKBUILD):
 {tab}  while IFS= read -r -d '' f; do
 {tab}    file -b "$f" | grep -q ELF && printf '%s\\0' "$f"
 {tab}  done |
-{tab}  xargs -0 "${{STRIP:-strip}}" --strip-unneeded
+{tab}  xargs -0 -r "${{STRIP:-strip}}" --strip-unneeded
 """  # noqa: PLW2901
 
             lines.append(f"{name}() {{{value}}}")
@@ -294,10 +294,18 @@ class VELBUILD(APKBUILD):
   while IFS= read -r -d '' f; do
     file -b "$f" | grep -q ELF && printf '%s\\0' "$f"
   done |
-  xargs -0 "${STRIP:-strip}" --strip-unneeded
+  xargs -0 -r "${STRIP:-strip}" --strip-unneeded
 """
+                script = f'#!/bin/sh\nbuild() {{\n{src}\n}}\nbuild "$@"'
+                if strip:
+                    script += (
+                        "\n_ret=$?\n"
+                        "if [ $_ret -ne 0 ];then\n"
+                        "exit $_ret\n"
+                        "fi"
+                    ) + strip
                 with open(os.path.join(path, f"{self.pkgname}.build"), "w") as f:
-                    _ = f.write(f'#!/bin/sh\nbuild() {{\n{src}\n}}\nbuild "$@"\n{strip}')
+                    _ = f.write(script)
 
         for name, body in super().subpackages.items():
             sub_vars, sub_funcs = bash.parse(body, APKBUILD_AUTOMATIC_VARIABLES)
