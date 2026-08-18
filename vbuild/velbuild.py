@@ -287,9 +287,11 @@ class VELBUILD(APKBUILD):
                     script += (
                         "\n_ret=$?\n"
                         + 'find "$srcdir" -type f -print0 | \n'
-                        + "  while IFS= read -r -d '' f; do\n"
-                        + '    file -b "$f" | grep -q ELF && printf \'%s\\0\' "$f"\n'
-                        + "  done | \n"
+                        + "  xargs -0 sh -c '\n"
+                        + "    for f;do\n"
+                        + '      file -b "$f" | grep -q ELF && printf "%s\\0" "$f"\n'
+                        + "    done\n"
+                        + "  ' _ | \n"
                         + '  xargs -0 -r "${STRIP:-strip}" --strip-unneeded\n'
                         + "exit $_ret\n"
                     )
