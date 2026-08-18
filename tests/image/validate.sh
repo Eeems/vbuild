@@ -20,7 +20,13 @@ if ! grep -Fq 'postinstall() {' entware-rc.post-upgrade; then
   exit 1
 fi
 
-if ! grep -Fq 'VBUILD_BUILD_SCRIPT' APKBUILD; then
-  echo "VBUILD_BUILD_SCRIPT missing from APKBUILD"
+exists entware-rc.build
+# shellcheck disable=SC2016
+if ! grep -Fq 'sh $(pwd)/$pkgname.build' APKBUILD; then
+  echo "pkgname.build invocation missing from APKBUILD"
+  exit 1
+fi
+if ! grep -Fq '#!/bin/sh' entware-rc.build; then
+  echo "shebang missing from entware-rc.build"
   exit 1
 fi

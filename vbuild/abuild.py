@@ -13,6 +13,7 @@ from typing import (
 )
 
 from . import containers
+from .bash import DEFAULT_VARIABLE_NAMES
 
 KEY_NAME = os.environ.get("VBUILD_KEY_NAME", "vbuild")
 
