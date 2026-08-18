@@ -285,13 +285,13 @@ class VELBUILD(APKBUILD):
                 script = f'#!/bin/sh\nbuild() {{\n{src}\n}}\nbuild "$@"'
                 if "!strip" not in self.options:
                     script += (
-                        "_ret=$?"
-                        + 'find "$srcdir" -type f -print0 |'
-                        + "  while IFS= read -r -d '' f; do"
-                        + '    file -b "$f" | grep -q ELF && printf \'%s\\0\' "$f"'
-                        + "  done |"
-                        + '  xargs -0 -r "${STRIP:-strip}" --strip-unneeded'
-                        + "exit $_ret"
+                        "_ret=$?\n"
+                        + 'find "$srcdir" -type f -print0 | \n'
+                        + "  while IFS= read -r -d '' f; do\n"
+                        + '    file -b "$f" | grep -q ELF && printf \'%s\\0\' "$f"\n'
+                        + "  done | \n"
+                        + '  xargs -0 -r "${STRIP:-strip}" --strip-unneeded\n'
+                        + "exit $_ret\n"
                     )
 
                 with open(os.path.join(path, f"{self.pkgname}.build"), "w") as f:
