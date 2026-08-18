@@ -129,7 +129,11 @@ class VELBUILD(APKBUILD):
 
                 lines.append(")")
 
-        lines.append(f"options={quoted_string(f'\n{"\n".join(self.options)}\n')}")
+        options = set(self.options)
+        if self.image is not None:
+            options |= {"!strip"}
+
+        lines.append(f"options={quoted_string(f'\n{"\n".join(sorted(options))}\n')}")
         if self.install.strip():
             lines.append(f"install={quoted_string(self.install)}")
 
@@ -278,8 +282,20 @@ class VELBUILD(APKBUILD):
         if self.image is not None:
             src = self.functions.get("build", None)
             if src is not None:
+                script = f'#!/bin/sh\nbuild() {{\n{src}\n}}\nbuild "$@"'
+                if "!strip" not in self.options:
+                    script += (
+                        "\n_ret=$?\n"
+                        + 'find "$srcdir" -type f -print0 | \n'
+                        + "  while IFS= read -r -d '' f; do\n"
+                        + '    file -b "$f" | grep -q ELF && printf \'%s\\0\' "$f"\n'
+                        + "  done | \n"
+                        + '  xargs -0 -r "${STRIP:-strip}" --strip-unneeded\n'
+                        + "exit $_ret\n"
+                    )
+
                 with open(os.path.join(path, f"{self.pkgname}.build"), "w") as f:
-                    _ = f.write(f'#!/bin/sh\nbuild() {{\n{src}\n}}\nbuild "$@"\n')
+                    _ = f.write(script)
 
         for name, body in super().subpackages.items():
             sub_vars, sub_funcs = bash.parse(body, APKBUILD_AUTOMATIC_VARIABLES)
