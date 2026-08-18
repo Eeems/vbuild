@@ -8,11 +8,12 @@ exists dist/x86_64/test-strip-1.0-r0.apk
 exists dist/x86_64/test-strip-sub-1.0-r0.apk
 owner dist/x86_64/test-strip-1.0-r0.apk
 
-if ! grep -Fq 'find "$srcdir" -type f -print0' APKBUILD; then
-	echo "Missing srcdir strip snippet in build()"
+exists test-strip.build
+if ! grep -Fq 'find "$srcdir" -type f -print0' test-strip.build; then
+	echo "Missing srcdir strip snippet in build script"
 	exit 1
 fi
-if ! grep -Fq 'xargs -0 -r "${STRIP:-strip}" --strip-unneeded' APKBUILD; then
+if ! grep -Fq 'xargs -0 -r "${STRIP:-strip}" --strip-unneeded' test-strip.build; then
 	echo "Missing strip command"
 	exit 1
 fi
@@ -21,7 +22,7 @@ if ! grep -Fq '!strip' APKBUILD; then
 	exit 1
 fi
 exists pkg/test-strip/usr/bin/hello
-if ! readelf -S pkg/test-strip/usr/bin/hello; then
+if ! readelf -S pkg/test-strip/usr/bin/hello >/dev/null; then
 	echo "Unable to inspect hello binary"
 	exit 1
 fi
@@ -35,7 +36,7 @@ if ! grep -q 'hello' pkg/test-strip/usr/share/test-strip/hello-copy.c; then
 	exit 1
 fi
 exists pkg/test-strip-sub/usr/bin/hello-copy
-if ! readelf -S pkg/test-strip-sub/usr/bin/hello-copy; then
+if ! readelf -S pkg/test-strip-sub/usr/bin/hello-copy >/dev/null; then
 	echo "Unable to inspect hello-copy binary"
 	exit 1
 fi

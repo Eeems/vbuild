@@ -129,9 +129,11 @@ class VELBUILD(APKBUILD):
 
                 lines.append(")")
 
-        lines.append(
-            f"options={quoted_string(f'\n{"\n".join(sorted(set(self.options) | {"!strip"}))}\n')}"
-        )
+        options = set(self.options)
+        if self.image is not None:
+            options |= {"!strip"}
+
+        lines.append(f"options={quoted_string(f'\n{"\n".join(sorted(options))}\n')}")
         if self.install.strip():
             lines.append(f"install={quoted_string(self.install)}")
 
@@ -225,14 +227,6 @@ class VELBUILD(APKBUILD):
                     unit_name = os.path.basename(unit)
                     value += f'{tab}install -Dm644 "$srcdir/{unit}" "$pkgdir/home/root/.vellum/share/{self.pkgname}/{unit_name}";\n'  # noqa: PLW2901
 
-            elif name == "build" and "!strip" not in self.options:
-                value += f"""{tab}find "$srcdir" -type f -print0 |
-{tab}  while IFS= read -r -d '' f; do
-{tab}    file -b "$f" | grep -q ELF && printf '%s\\0' "$f"
-{tab}  done |
-{tab}  xargs -0 -r "${{STRIP:-strip}}" --strip-unneeded
-"""  # noqa: PLW2901
-
             lines.append(f"{name}() {{{value}}}")
 
         for name, value in self.subpackages.items():
@@ -288,22 +282,18 @@ class VELBUILD(APKBUILD):
         if self.image is not None:
             src = self.functions.get("build", None)
             if src is not None:
-                strip = ""
+                script = f'#!/bin/sh\nbuild() {{\n{src}\n}}\nbuild "$@"'
                 if "!strip" not in self.options:
-                    strip = """\nfind "$srcdir" -type f -print0 |
+                    script += """
+_ret=$?
+find "$srcdir" -type f -print0 |
   while IFS= read -r -d '' f; do
     file -b "$f" | grep -q ELF && printf '%s\\0' "$f"
   done |
   xargs -0 -r "${STRIP:-strip}" --strip-unneeded
+exit $_ret
 """
-                script = f'#!/bin/sh\nbuild() {{\n{src}\n}}\nbuild "$@"'
-                if strip:
-                    script += (
-                        "\n_ret=$?\n"
-                        "if [ $_ret -ne 0 ];then\n"
-                        "exit $_ret\n"
-                        "fi"
-                    ) + strip
+
                 with open(os.path.join(path, f"{self.pkgname}.build"), "w") as f:
                     _ = f.write(script)
 

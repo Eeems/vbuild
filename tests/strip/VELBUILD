@@ -17,6 +17,8 @@ hello.c
 hello-copy.c
 "
 
+image="ghcr.io/eeems/vbuild-builder:latest"
+
 build() {
 	cc -O2 -o "$srcdir/hello" "$srcdir/hello.c"
 	cc -O2 -o "$srcdir/hello-copy" "$srcdir/hello-copy.c"
