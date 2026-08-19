@@ -208,7 +208,7 @@ class VELBUILD(APKBUILD):
                     + " \\\n"
                     + f'{tab * 2}--workdir "$builddir" \\\n'
                     + f"{tab * 2}$image \\\n"
-                    + f"{tab * 2}sh $(pwd)/$pkgname.build\n"
+                    + f"{tab * 2}sh $startdir/$pkgname.build\n"
                     + f"{tab}_ret=$?\n"
                     + f"{tab}if [ $_ret -ne 0 ];then\n"
                     + f"{tab}{tab}exit $_ret\n"
