@@ -291,9 +291,11 @@ class VELBUILD(APKBUILD):
                         + "fi\n"
                         + "STRIP=${STRIP:-${CROSS_COMPILE}strip}\n"
                         + "OBJDUMP=${OBJDUMP:-${CROSS_COMPILE}objdump}\n"
+                        + 'echo "Stripping with strip=$STRIP and objdump=$OBJDUMP"\n'
                         + 'formats=$("$STRIP" --info |\n'
                         + "  sed -n 's/^\\([a-z0-9][a-z0-9._-]*\\)$/\\1/p' |\n"
                         + "  tr '\\n' ' ')\n"
+                        + 'echo "Allowed formats: $formats"\n'
                         + "export OBJDUMP formats\n"
                         + 'find "$srcdir" -type f -print0 |\n'
                         + "  xargs -0 -r sh -c '\n"
@@ -302,12 +304,20 @@ class VELBUILD(APKBUILD):
                         + '      fmt=$("$OBJDUMP" -f "$f" 2>/dev/null |\n'
                         + '        sed -n "s/.*file format \\([a-z0-9][a-z0-9._-]*\\).*/\\1/p" |\n'
                         + "        head -1)\n"
+                        + '      [ -n "$fmt" ] || continue\n'
                         + '      case " $formats " in\n'
-                        + '        *" $fmt "*) printf "%s\\0" "$f" ;;\n'
+                        + '        *" $fmt "*)\n'
+                        + '          echo "stripping $f (format $fmt)" >&2\n'
+                        + '          printf "%s\\0" "$f"\n'
+                        + "          ;;\n"
                         + "      esac\n"
                         + "    done\n"
                         + "  ' sh |\n"
                         + '  xargs -0 -r "$STRIP" --strip-unneeded\n'
+                        + "strip_ret=$?\n"
+                        + 'if [ "$strip_ret" -ne 0 ]; then\n'
+                        + "    exit $strip_ret\n"
+                        + "fi\n"
                         + "exit $_ret\n"
                     )
 
