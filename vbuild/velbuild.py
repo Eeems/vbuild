@@ -285,9 +285,10 @@ class VELBUILD(APKBUILD):
                 script = f'#!/bin/sh\nbuild() {{\n{src}\n}}\nbuild "$@"'
                 if "!strip" not in self.options:
                     script += (
-                        "\n_ret=$?\n"
+                        "\n_build_ret=$?\n"
+                        + "set +e\n"
                         + 'if [ "$CARCH" = "noarch" ]; then\n'
-                        + "    exit $_ret\n"
+                        + "    exit $_build_ret\n"
                         + "fi\n"
                         + "STRIP=${STRIP:-${CROSS_COMPILE}strip}\n"
                         + "OBJDUMP=${OBJDUMP:-${CROSS_COMPILE}objdump}\n"
@@ -313,15 +314,16 @@ class VELBUILD(APKBUILD):
                         + "    done\n"
                         + "  ' sh |\n"
                         + '    xargs -0 -r "$STRIP" --strip-unneeded 2>&1)\n'
+                        + "_strip_ret=$?\n"
                         + 'if [ -n "$output" ]; then\n'
                         + '    output=$(printf "%s\\n" "$output" |\n'
-                        + '        grep -v -e "Unable to recognise the format of the input file" -e "file format not recognized")\n'
+                        + '        grep -v -e "Unable to recognise the format of the input file" -e "file format not recognized" -e "plugin needed to handle")\n'
                         + '    if [ -n "$output" ]; then\n'
                         + '        printf "%s\\n" "$output" >&2\n'
-                        + "        exit 1\n"
+                        + "        exit $_strip_ret\n"
                         + "    fi\n"
                         + "fi\n"
-                        + "exit $_ret\n"
+                        + "exit $_build_ret\n"
                     )
 
                 with open(os.path.join(path, f"{self.pkgname}.build"), "w") as f:
