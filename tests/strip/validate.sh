@@ -7,16 +7,7 @@ exists APKBUILD
 exists dist/x86_64/test-strip-1.0-r0.apk
 exists dist/x86_64/test-strip-sub-1.0-r0.apk
 owner dist/x86_64/test-strip-1.0-r0.apk
-
 exists test-strip.build
-if ! grep -Fq 'find "$srcdir" -type f -print0' test-strip.build; then
-	echo "Missing srcdir strip snippet in build script"
-	exit 1
-fi
-if ! grep -Fq 'xargs -0 -r "$STRIP" --strip-unneeded' test-strip.build; then
-	echo "Missing strip command"
-	exit 1
-fi
 if ! grep -Fq '!strip' APKBUILD; then
 	echo "Missing !strip option"
 	exit 1

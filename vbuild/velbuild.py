@@ -293,30 +293,33 @@ class VELBUILD(APKBUILD):
                         + "OBJDUMP=${OBJDUMP:-${CROSS_COMPILE}objdump}\n"
                         + 'echo "Stripping with strip=$STRIP and objdump=$OBJDUMP"\n'
                         + 'formats=$("$STRIP" --info |\n'
-                        + "  sed -n 's/^\\([a-z0-9][a-z0-9._-]*\\)$/\\1/p' |\n"
-                        + "  tr '\\n' ' ')\n"
+                        + "    sed -n 's/^\\([a-z0-9][a-z0-9._-]*\\)$/\\1/p' |\n"
+                        + "    grep '^elf' |\n"
+                        + "    tr '\\n' ' ')\n"
                         + 'echo "Allowed formats: $formats"\n'
                         + "export OBJDUMP formats\n"
-                        + 'find "$srcdir" -type f -print0 |\n'
-                        + "  xargs -0 -r sh -c '\n"
+                        + 'output=$(find "$srcdir" -type f -print0 |\n'
+                        + "    xargs -0 -r sh -c '\n"
                         + "    for f do\n"
-                        + '      file -b "$f" | grep -q ELF || continue\n'
                         + '      fmt=$("$OBJDUMP" -f "$f" 2>/dev/null |\n'
                         + '        sed -n "s/.*file format \\([a-z0-9][a-z0-9._-]*\\).*/\\1/p" |\n'
                         + "        head -1)\n"
                         + '      [ -n "$fmt" ] || continue\n'
                         + '      case " $formats " in\n'
                         + '        *" $fmt "*)\n'
-                        + '          echo "stripping $f (format $fmt)" >&2\n'
                         + '          printf "%s\\0" "$f"\n'
                         + "          ;;\n"
                         + "      esac\n"
                         + "    done\n"
                         + "  ' sh |\n"
-                        + '  xargs -0 -r "$STRIP" --strip-unneeded\n'
-                        + "strip_ret=$?\n"
-                        + 'if [ "$strip_ret" -ne 0 ]; then\n'
-                        + "    exit $strip_ret\n"
+                        + '    xargs -0 -r "$STRIP" --strip-unneeded 2>&1)\n'
+                        + 'if [ -n "$output" ]; then\n'
+                        + '    output=$(printf "%s\\n" "$output" |\n'
+                        + '        grep -v -e "Unable to recognise the format of the input file" -e "file format not recognized")\n'
+                        + '    if [ -n "$output" ]; then\n'
+                        + '        printf "%s\\n" "$output" >&2\n'
+                        + "        exit 1\n"
+                        + "    fi\n"
                         + "fi\n"
                         + "exit $_ret\n"
                     )

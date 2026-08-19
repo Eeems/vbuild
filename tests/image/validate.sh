@@ -34,7 +34,7 @@ fi
 
 exists entware-rc.build
 # shellcheck disable=SC2016
-if ! grep -Fq 'sh $(pwd)/$pkgname.build' APKBUILD; then
+if ! grep -Fq 'sh $startdir/$pkgname.build' APKBUILD; then
   echo "pkgname.build invocation missing from APKBUILD"
   exit 1
 fi
