@@ -47,6 +47,8 @@ VELBUILD_VARIABLE_MAP = {
     "readmeurl": "_readmeurl",
     "donateurl": "_donateurl",
     "changelogurl": "_changelogurl",
+    "licenseurl": "_licenseurl",
+    "sourceurl": "_sourceurl",
     "status": "_status",
     "systemdunits": "_systemdunits",
 }
@@ -160,6 +162,33 @@ class VELBUILD(APKBUILD):
         if "package" not in functions:
             functions["package"] = "\n"
 
+        # Download license if licenseurl is set
+        if self.licenseurl:
+            import urllib.request
+
+            try:
+                req = urllib.request.Request(
+                    self.licenseurl, headers={"User-Agent": "vbuild"}
+                )
+                with urllib.request.urlopen(req, timeout=10) as response:
+                    license_content = response.read().decode("utf-8")
+                # Write license to a temporary source file
+                import os
+                import tempfile
+
+                srcdir = os.environ.get("VBUILD_SRCDIR", "/tmp")
+                license_path = os.path.join(srcdir, "LICENSE")
+                with open(license_path, "w") as f:
+                    f.write(license_content)
+                # Add LICENSE to source if not already present
+                source = variables.get("source", [])
+                if isinstance(source, list):
+                    if "LICENSE" not in source:
+                        source.append("LICENSE")
+                        variables["source"] = source
+            except Exception:
+                pass  # Ignore download errors, fallback to local file
+
         runtime = containers.runtime()
         assert runtime is not None
         match runtime:
@@ -218,14 +247,20 @@ class VELBUILD(APKBUILD):
             elif name == "package":
                 if self.postosupgrade is not None or self.systemdunits:
                     fn_name = INSTALL_FUNCTION_NAME_MAP["postosupgrade"]
-                    value += f'{tab}install -Dm755 "$startdir"/"$pkgname".{fn_name} '  # noqa: PLW2901
                     value += (  # noqa: PLW2901
-                        '"$pkgdir"/home/root/.vellum/hooks/post-os-upgrade/"$pkgname";\n'
+                        f'{tab}install -Dm755 "$startdir"/"$pkgname".{fn_name} '
+                        + '"$pkgdir"/home/root/.vellum/hooks/post-os-upgrade/"$pkgname";\n'
                     )
 
                 for unit in self.systemdunits:
                     unit_name = os.path.basename(unit)
                     value += f'{tab}install -Dm644 "$srcdir/{unit}" "$pkgdir/home/root/.vellum/share/{self.pkgname}/{unit_name}";\n'  # noqa: PLW2901
+
+                value += (  # noqa: PLW2901
+                    f'{tab}mkdir -p "$pkgdir/home/root/.vellum/licenses/$pkgname";\n'
+                    + f'{tab}cp "$srcdir"/LICENSE{{,.txt,.md}} "$pkgdir"/home/root/.vellum/licenses/"$pkgname"/LICENSE 2>/dev/null || true;\n'
+                    + f'{tab}echo "{self.sourceurl}" > "$pkgdir/home/root/.vellum/licenses/$pkgname/SOURCES";\n'
+                )
 
             lines.append(f"{name}() {{{value}}}")
 
@@ -427,6 +462,18 @@ class VELBUILD(APKBUILD):
             yield ErrorType.Error, f"changelogurl is not valid: {e}"
 
         try:
+            self._validate_url(self.licenseurl)
+
+        except (URLValidationError, URLError) as e:
+            yield ErrorType.Error, f"licenseurl is not valid: {e}"
+
+        try:
+            self._validate_url(self.sourceurl)
+
+        except (URLValidationError, URLError) as e:
+            yield ErrorType.Error, f"sourceurl is not valid: {e}"
+
+        try:
             self._validate_url(self.url)
 
         except (URLValidationError, URLError) as e:
@@ -552,7 +599,12 @@ class VELBUILD(APKBUILD):
                     + f'"$subpkgdir/home/root/.vellum/share/{name}/{unit_name}";'
                 )
 
-            subpackages[name] += "\n"
+            subpackages[name] += (
+                f'\n{tab}mkdir -p "$subpkgdir/home/root/.vellum/licenses/{name}";'
+                + f'\n{tab}cp "$srcdir"/LICENSE{{,.txt,.md}} "$subpkgdir"/home/root/.vellum/licenses/"{name}"/LICENSE 2>/dev/null || true;'
+                + f'\n{tab}echo "{self.sourceurl}" '
+                + f'> "$subpkgdir/home/root/.vellum/licenses/{name}/SOURCES";\n'
+            )
 
         return subpackages
 
@@ -617,6 +669,14 @@ class VELBUILD(APKBUILD):
     @typed_property
     def changelogurl(self, value: str | None) -> str | None:
         return value
+
+    @typed_property
+    def licenseurl(self, value: str | None) -> str | None:
+        return value
+
+    @typed_property
+    def sourceurl(self, value: str | None) -> str | None:
+        return value or self.url
 
     @typed_property
     def status(self, value: str | None) -> str | None:
