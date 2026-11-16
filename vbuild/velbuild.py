@@ -1,4 +1,5 @@
 import os
+import shutil
 from collections.abc import (
     Callable,
     Generator,
@@ -61,6 +62,10 @@ class NonRaisingHTTPErrorProcessor(HTTPErrorProcessor):
 
 
 class URLValidationError(Exception):
+    pass
+
+
+class DownloadError(Exception):
     pass
 
 
@@ -161,33 +166,6 @@ class VELBUILD(APKBUILD):
         functions = self.functions.copy()
         if "package" not in functions:
             functions["package"] = "\n"
-
-        # Download license if licenseurl is set
-        if self.licenseurl:
-            import urllib.request
-
-            try:
-                req = urllib.request.Request(
-                    self.licenseurl, headers={"User-Agent": "vbuild"}
-                )
-                with urllib.request.urlopen(req, timeout=10) as response:
-                    license_content = response.read().decode("utf-8")
-                # Write license to a temporary source file
-                import os
-                import tempfile
-
-                srcdir = os.environ.get("VBUILD_SRCDIR", "/tmp")
-                license_path = os.path.join(srcdir, "LICENSE")
-                with open(license_path, "w") as f:
-                    f.write(license_content)
-                # Add LICENSE to source if not already present
-                source = variables.get("source", [])
-                if isinstance(source, list):
-                    if "LICENSE" not in source:
-                        source.append("LICENSE")
-                        variables["source"] = source
-            except Exception:
-                pass  # Ignore download errors, fallback to local file
 
         runtime = containers.runtime()
         assert runtime is not None
@@ -409,6 +387,33 @@ class VELBUILD(APKBUILD):
                     "w",
                 ) as f:
                     _ = f.write("#!/bin/sh\n" + cleandoc(sub_funcs["trigger"]))
+
+    def download(self) -> None:
+        if not self.licenseurl:
+            return
+
+        parsed = urlparse(self.licenseurl)
+        if parsed.scheme not in ("http", "https"):
+            raise DownloadError(f"Unsupported URL schema: {parsed.scheme}")
+
+        srcdest = os.environ.get(
+            "SRCDEST", os.path.join(os.path.expanduser("~/.cache/vbuild/distfiles"))
+        )
+        os.makedirs(srcdest, exist_ok=True)
+
+        with build_opener(NonRaisingHTTPErrorProcessor).open(
+            Request(  # noqa: S310
+                self.licenseurl,
+                method="GET",
+                headers={"User-Agent": "vbuild"},
+            ),
+            timeout=10,
+        ) as res:  # pyright: ignore[reportAny]
+            if res.status >= 300 and res.status != 403:  # pyright: ignore[reportAny]
+                raise DownloadError(f"Unexpected response code: {res.status}")  # pyright: ignore[reportAny]
+
+            with open(os.path.join(srcdest, "LICENSE"), "wb") as f:
+                shutil.copyfileobj(res, f)  # pyright: ignore[reportAny]
 
     def _validate_url(self, url: str | None) -> None:
         if url is None:
