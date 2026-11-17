@@ -22,7 +22,6 @@ package() {
 	mkdir -p "$pkgdir/home/root/xovi/exthome/qt-resource-rebuilder/rmHacks"
 	cp -r rmHacks/* \
 		"$pkgdir/home/root/xovi/exthome/qt-resource-rebuilder/rmHacks/"
-	touch "$srcdir"/LICENSE
 }
 sha512sums="
 8ce81544967a51aabd788ecc63771731e02c9f6e99636dea844bb9ac69656a5d4b3583351c7ffb5caad60288ac6472385fc9e143a693ca6691eaccb862f3d01e  rm-hacks-qmd-1c617914af95e2d3b8f25c7c0fd71ef11e21b461.tar.gz

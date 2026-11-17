@@ -264,6 +264,12 @@ class VELBUILD(APKBUILD):
                     + f"{tab}{tab}done\n"
                     + f"{tab}fi\n"
                     + f'{tab}if [ ! -f "$pkgdir"/home/root/.vellum/licenses/"$pkgname"/LICENSE ];then\n'
+                    + f'{tab}{tab}for f in "$(find "$srcdir" -mindepth 2 -maxdepth 2 -name \'LICENSE*\')";do\n'
+                    + f'{tab}{tab}{tab}cat "$f" > "$pkgdir"/home/root/.vellum/licenses/"$pkgname"/LICENSE\n'
+                    + f"{tab}{tab}{tab}break\n"
+                    + f"{tab}{tab}done\n"
+                    + f"{tab}fi\n"
+                    + f'{tab}if [ ! -f "$pkgdir"/home/root/.vellum/licenses/"$pkgname"/LICENSE ];then\n'
                     + f'{tab}{tab}echo "LICENSE missing"\n'
                     + f"{tab}{tab}exit 1\n"
                     + f"{tab}fi\n"
