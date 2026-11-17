@@ -236,7 +236,7 @@ class VELBUILD(APKBUILD):
 
                 value += (  # noqa: PLW2901
                     f'{tab}mkdir -p "$pkgdir/home/root/.vellum/licenses/$pkgname";\n'
-                    + f'{tab}for f in "$startdir"/LICENSE "$srcdir"/LICENSE{{,.txt,.md}};do\n'
+                    + f'{tab}for f in "$startdir"/LICENSE "$srcdir"/LICENSE{{,.txt,.md,.rst}};do\n'
                     + f'{tab}{tab}if [ -f "$f" ]; then\n'
                     + f'{tab}{tab}{tab}cp "$f" "$pkgdir"/home/root/.vellum/licenses/"$pkgname"/;\n'
                     + f"{tab}{tab}fi;\n"
@@ -612,7 +612,7 @@ class VELBUILD(APKBUILD):
 
             subpackages[name] += (
                 f'\n{tab}mkdir -p "$subpkgdir/home/root/.vellum/licenses/{name}";'
-                + f'{tab}for f in "$startdir"/LICENSE "$srcdir"/LICENSE{{,.txt,.md}};do\n'
+                + f'{tab}for f in "$startdir"/LICENSE "$srcdir"/LICENSE{{,.txt,.md,.rst}};do\n'
                 + f'{tab}{tab}if [ -f "$f" ]; then\n'
                 + f'{tab}{tab}{tab}cp "$f" "$subpkgdir"/home/root/.vellum/licenses/{name}/;\n'
                 + f"{tab}{tab}fi;\n"
