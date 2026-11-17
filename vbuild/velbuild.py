@@ -1,4 +1,5 @@
 import os
+import shutil
 from collections.abc import (
     Callable,
     Generator,
@@ -47,6 +48,8 @@ VELBUILD_VARIABLE_MAP = {
     "readmeurl": "_readmeurl",
     "donateurl": "_donateurl",
     "changelogurl": "_changelogurl",
+    "licenseurl": "_licenseurl",
+    "sourceurl": "_sourceurl",
     "status": "_status",
     "systemdunits": "_systemdunits",
 }
@@ -59,6 +62,10 @@ class NonRaisingHTTPErrorProcessor(HTTPErrorProcessor):
 
 
 class URLValidationError(Exception):
+    pass
+
+
+class DownloadError(Exception):
     pass
 
 
@@ -218,14 +225,24 @@ class VELBUILD(APKBUILD):
             elif name == "package":
                 if self.postosupgrade is not None or self.systemdunits:
                     fn_name = INSTALL_FUNCTION_NAME_MAP["postosupgrade"]
-                    value += f'{tab}install -Dm755 "$startdir"/"$pkgname".{fn_name} '  # noqa: PLW2901
                     value += (  # noqa: PLW2901
-                        '"$pkgdir"/home/root/.vellum/hooks/post-os-upgrade/"$pkgname";\n'
+                        f'{tab}install -Dm755 "$startdir"/"$pkgname".{fn_name} '
+                        + '"$pkgdir"/home/root/.vellum/hooks/post-os-upgrade/"$pkgname";\n'
                     )
 
                 for unit in self.systemdunits:
                     unit_name = os.path.basename(unit)
                     value += f'{tab}install -Dm644 "$srcdir/{unit}" "$pkgdir/home/root/.vellum/share/{self.pkgname}/{unit_name}";\n'  # noqa: PLW2901
+
+                value += (  # noqa: PLW2901
+                    f'{tab}mkdir -p "$pkgdir/home/root/.vellum/licenses/$pkgname";\n'
+                    + f'{tab}for f in "$startdir"/LICENSE "$srcdir"/LICENSE{{,.txt,.md,.rst}};do\n'
+                    + f'{tab}{tab}if [ -f "$f" ]; then\n'
+                    + f'{tab}{tab}{tab}cp "$f" "$pkgdir"/home/root/.vellum/licenses/"$pkgname"/;\n'
+                    + f"{tab}{tab}fi;\n"
+                    + f"{tab}done;\n"
+                    + f'{tab}echo "{self.sourceurl}" > "$pkgdir/home/root/.vellum/licenses/$pkgname/SOURCES";\n'
+                )
 
             lines.append(f"{name}() {{{value}}}")
 
@@ -375,6 +392,35 @@ class VELBUILD(APKBUILD):
                 ) as f:
                     _ = f.write("#!/bin/sh\n" + cleandoc(sub_funcs["trigger"]))
 
+    def download(self, directory: str) -> None:
+        if not self.licenseurl:
+            return
+
+        parsed = urlparse(self.licenseurl)
+        if parsed.scheme not in ("http", "https"):
+            raise DownloadError(f"Unsupported URL schema: {parsed.scheme}")
+
+        with build_opener(HTTPErrorProcessor).open(
+            Request(  # noqa: S310
+                self.licenseurl,
+                method="GET",
+                headers={"User-Agent": "vbuild"},
+            ),
+            timeout=10,
+        ) as res:  # pyright: ignore[reportAny]
+            if res.status >= 300:  # pyright: ignore[reportAny]
+                raise DownloadError(f"Unexpected response code: {res.status}")  # pyright: ignore[reportAny]
+
+            license_path = os.path.join(directory, "LICENSE")
+            with open(license_path, "wb") as f:
+                shutil.copyfileobj(res, f)  # pyright: ignore[reportAny]
+
+            if "Content-Length" in res.headers and int(  # pyright: ignore[reportAny]
+                res.headers["Content-Length"]  # pyright: ignore[reportAny]
+            ) != os.path.getsize(license_path):
+                os.remove(license_path)
+                raise DownloadError("Download size mismatch")
+
     def _validate_url(self, url: str | None) -> None:
         if url is None:
             return
@@ -425,6 +471,18 @@ class VELBUILD(APKBUILD):
 
         except (URLValidationError, URLError) as e:
             yield ErrorType.Error, f"changelogurl is not valid: {e}"
+
+        try:
+            self._validate_url(self.licenseurl)
+
+        except (URLValidationError, URLError) as e:
+            yield ErrorType.Error, f"licenseurl is not valid: {e}"
+
+        try:
+            self._validate_url(self.sourceurl)
+
+        except (URLValidationError, URLError) as e:
+            yield ErrorType.Error, f"sourceurl is not valid: {e}"
 
         try:
             self._validate_url(self.url)
@@ -552,7 +610,16 @@ class VELBUILD(APKBUILD):
                     + f'"$subpkgdir/home/root/.vellum/share/{name}/{unit_name}";'
                 )
 
-            subpackages[name] += "\n"
+            subpackages[name] += (
+                f'\n{tab}mkdir -p "$subpkgdir/home/root/.vellum/licenses/{name}";'
+                + f'{tab}for f in "$startdir"/LICENSE "$srcdir"/LICENSE{{,.txt,.md,.rst}};do\n'
+                + f'{tab}{tab}if [ -f "$f" ]; then\n'
+                + f'{tab}{tab}{tab}cp "$f" "$subpkgdir"/home/root/.vellum/licenses/{name}/;\n'
+                + f"{tab}{tab}fi;\n"
+                + f"{tab}done;\n"
+                + f'\n{tab}echo "{self.sourceurl}" '
+                + f'> "$subpkgdir/home/root/.vellum/licenses/{name}/SOURCES";\n'
+            )
 
         return subpackages
 
@@ -617,6 +684,14 @@ class VELBUILD(APKBUILD):
     @typed_property
     def changelogurl(self, value: str | None) -> str | None:
         return value
+
+    @typed_property
+    def licenseurl(self, value: str | None) -> str | None:
+        return value
+
+    @typed_property
+    def sourceurl(self, value: str | None) -> str | None:
+        return value or self.url
 
     @typed_property
     def status(self, value: str | None) -> str | None:
