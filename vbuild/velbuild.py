@@ -256,9 +256,9 @@ class VELBUILD(APKBUILD):
                     + f'{tab}{tab}printf "%s\\n" {" ".join(urls)} > "$pkgdir/home/root/.vellum/licenses/$pkgname/SOURCES"\n'
                     + f"{tab}fi\n"
                     + f'{tab}if [ ! -f "$pkgdir"/home/root/.vellum/licenses/"$pkgname"/LICENSE ];then\n'
-                    + f'{tab}{tab}for f in "$startdir"/LICENSE "$srcdir"/LICENSE{{,.txt,.md,.rst}};do\n'
+                    + f'{tab}{tab}for f in "$startdir"/LICENSE "$srcdir"/LICENSE "$srcdir"/LICENSE.txt "$srcdir"/LICENSE.md "$srcdir"/LICENSE.rst;do\n'
                     + f'{tab}{tab}{tab}if [ -f "$f" ]; then\n'
-                    + f'{tab}{tab}{tab}{tab}cp "$f" "$pkgdir"/home/root/.vellum/licenses/"$pkgname"/LICENSE\n'
+                    + f'{tab}{tab}{tab}{tab}cat "$f" > "$pkgdir"/home/root/.vellum/licenses/"$pkgname"/LICENSE\n'
                     + f"{tab}{tab}{tab}{tab}break\n"
                     + f"{tab}{tab}{tab}fi\n"
                     + f"{tab}{tab}done\n"
