@@ -400,7 +400,7 @@ class VELBUILD(APKBUILD):
         if parsed.scheme not in ("http", "https"):
             raise DownloadError(f"Unsupported URL schema: {parsed.scheme}")
 
-        with build_opener(NonRaisingHTTPErrorProcessor).open(
+        with build_opener(HTTPErrorProcessor).open(
             Request(  # noqa: S310
                 self.licenseurl,
                 method="GET",
@@ -411,8 +411,15 @@ class VELBUILD(APKBUILD):
             if res.status >= 300:  # pyright: ignore[reportAny]
                 raise DownloadError(f"Unexpected response code: {res.status}")  # pyright: ignore[reportAny]
 
-            with open(os.path.join(directory, "LICENSE"), "wb") as f:
+            license_path = os.path.join(directory, "LICENSE")
+            with open(license_path, "wb") as f:
                 shutil.copyfileobj(res, f)  # pyright: ignore[reportAny]
+
+            if "Content-Length" in res.headers and int(  # pyright: ignore[reportAny]
+                res.headers["Content-Length"]  # pyright: ignore[reportAny]
+            ) != os.path.getsize(license_path):
+                os.remove(license_path)
+                raise DownloadError("Download size mismatch")
 
     def _validate_url(self, url: str | None) -> None:
         if url is None:
