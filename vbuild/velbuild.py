@@ -1,4 +1,5 @@
 import os
+import shlex
 import shutil
 from collections.abc import (
     Callable,
@@ -48,8 +49,6 @@ VELBUILD_VARIABLE_MAP = {
     "readmeurl": "_readmeurl",
     "donateurl": "_donateurl",
     "changelogurl": "_changelogurl",
-    "licenseurl": "_licenseurl",
-    "sourceurl": "_sourceurl",
     "status": "_status",
     "systemdunits": "_systemdunits",
 }
@@ -234,15 +233,38 @@ class VELBUILD(APKBUILD):
                     unit_name = os.path.basename(unit)
                     value += f'{tab}install -Dm644 "$srcdir/{unit}" "$pkgdir/home/root/.vellum/share/{self.pkgname}/{unit_name}";\n'  # noqa: PLW2901
 
+                urls: list[str] = []
+                baseurl = os.environ.get("VBUILD_BASE_URL")
+                for src in self.source:
+                    if "::" in src:
+                        src = src.split("::", 1)[1]  # noqa: PLW2901
+
+                    if "://" not in src and baseurl:
+                        src = f"{baseurl}{src}"  # noqa: PLW2901
+
+                    if "://" in src:
+                        urls.append(shlex.quote(src))
+
+                if not urls:
+                    urls.append(shlex.quote(self.url))
+
                 value += (  # noqa: PLW2901
-                    f'{tab}mkdir -p "$pkgdir/home/root/.vellum/licenses/$pkgname";\n'
-                    + f'{tab}for f in "$startdir"/LICENSE "$srcdir"/LICENSE{{,.txt,.md,.rst}};do\n'
-                    + f'{tab}{tab}if [ -f "$f" ]; then\n'
-                    + f'{tab}{tab}{tab}cp "$f" "$pkgdir"/home/root/.vellum/licenses/"$pkgname"/LICENSE;\n'
-                    + f"{tab}{tab}{tab}break;\n"
-                    + f"{tab}{tab}fi;\n"
-                    + f"{tab}done;\n"
-                    + f'{tab}echo "{self.sourceurl}" > "$pkgdir/home/root/.vellum/licenses/$pkgname/SOURCES";\n'
+                    f'{tab}mkdir -p "$pkgdir/home/root/.vellum/licenses/$pkgname"\n'
+                    + f'{tab}if [ ! -f "$pkgdir"/home/root/.vellum/licenses/"$pkgname"/SOURCES ];then\n'
+                    + f'{tab}{tab}printf "%s\\n" {" ".join(urls)} > "$pkgdir/home/root/.vellum/licenses/$pkgname/SOURCES"\n'
+                    + f"{tab}fi\n"
+                    + f'{tab}if [ ! -f "$pkgdir"/home/root/.vellum/licenses/"$pkgname"/LICENSE ];then\n'
+                    + f'{tab}{tab}for f in "$startdir"/LICENSE "$srcdir"/LICENSE{{,.txt,.md,.rst}};do\n'
+                    + f'{tab}{tab}{tab}if [ -f "$f" ]; then\n'
+                    + f'{tab}{tab}{tab}{tab}cp "$f" "$pkgdir"/home/root/.vellum/licenses/"$pkgname"/LICENSE\n'
+                    + f"{tab}{tab}{tab}{tab}break\n"
+                    + f"{tab}{tab}{tab}fi\n"
+                    + f"{tab}{tab}done\n"
+                    + f"{tab}fi\n"
+                    + f'{tab}if [ ! -f "$pkgdir"/home/root/.vellum/licenses/"$pkgname"/LICENSE ];then\n'
+                    + f'{tab}{tab}echo "LICENSE missing"\n'
+                    + f"{tab}{tab}exit 1\n"
+                    + f"{tab}fi\n"
                 )
 
             lines.append(f"{name}() {{{value}}}")
@@ -393,35 +415,6 @@ class VELBUILD(APKBUILD):
                 ) as f:
                     _ = f.write("#!/bin/sh\n" + cleandoc(sub_funcs["trigger"]))
 
-    def download(self, directory: str) -> None:
-        if not self.licenseurl:
-            return
-
-        parsed = urlparse(self.licenseurl)
-        if parsed.scheme not in ("http", "https"):
-            raise DownloadError(f"Unsupported URL schema: {parsed.scheme}")
-
-        with build_opener(HTTPErrorProcessor).open(
-            Request(  # noqa: S310
-                self.licenseurl,
-                method="GET",
-                headers={"User-Agent": "vbuild"},
-            ),
-            timeout=10,
-        ) as res:  # pyright: ignore[reportAny]
-            if res.status >= 300:  # pyright: ignore[reportAny]
-                raise DownloadError(f"Unexpected response code: {res.status}")  # pyright: ignore[reportAny]
-
-            license_path = os.path.join(directory, "LICENSE")
-            with open(license_path, "wb") as f:
-                shutil.copyfileobj(res, f)  # pyright: ignore[reportAny]
-
-            if "Content-Length" in res.headers and int(  # pyright: ignore[reportAny]
-                res.headers["Content-Length"]  # pyright: ignore[reportAny]
-            ) != os.path.getsize(license_path):
-                os.remove(license_path)
-                raise DownloadError("Download size mismatch")
-
     def _validate_url(self, url: str | None) -> None:
         if url is None:
             return
@@ -472,18 +465,6 @@ class VELBUILD(APKBUILD):
 
         except (URLValidationError, URLError) as e:
             yield ErrorType.Error, f"changelogurl is not valid: {e}"
-
-        try:
-            self._validate_url(self.licenseurl)
-
-        except (URLValidationError, URLError) as e:
-            yield ErrorType.Error, f"licenseurl is not valid: {e}"
-
-        try:
-            self._validate_url(self.sourceurl)
-
-        except (URLValidationError, URLError) as e:
-            yield ErrorType.Error, f"sourceurl is not valid: {e}"
 
         try:
             self._validate_url(self.url)
@@ -612,15 +593,26 @@ class VELBUILD(APKBUILD):
                 )
 
             subpackages[name] += (
-                f'\n{tab}mkdir -p "$subpkgdir/home/root/.vellum/licenses/{name}";'
-                + f'{tab}for f in "$startdir"/LICENSE "$srcdir"/LICENSE{{,.txt,.md,.rst}};do\n'
-                + f'{tab}{tab}if [ -f "$f" ]; then\n'
-                + f'{tab}{tab}{tab}cp "$f" "$subpkgdir"/home/root/.vellum/licenses/{name}/LICENSE;\n'
-                + f"{tab}{tab}{tab}break;\n"
-                + f"{tab}{tab}fi;\n"
-                + f"{tab}done;\n"
-                + f'\n{tab}echo "{self.sourceurl}" '
-                + f'> "$subpkgdir/home/root/.vellum/licenses/{name}/SOURCES";\n'
+                f'\n{tab}mkdir -p "$subpkgdir/home/root/.vellum/licenses/{name}"\n'
+                + f'{tab}if [ ! -f "$subpkgdir"/home/root/.vellum/licenses/{name}/SOURCES ];then\n'
+                + f'{tab}{tab}cp "$pkgdir/home/root/.vellum/licenses/{self.pkgname}/SOURCES" "$subpkgdir/home/root/.vellum/licenses/{name}/SOURCES"\n'
+                + f"{tab}fi\n"
+                + f'{tab}if [ ! -f "$subpkgdir"/home/root/.vellum/licenses/{name}/LICENSE ];then\n'
+                + f'{tab}{tab}for f in "$startdir"/LICENSE "$srcdir"/LICENSE{{,.txt,.md,.rst}};do\n'
+                + f'{tab}{tab}{tab}if [ -f "$f" ]; then\n'
+                + f'{tab}{tab}{tab}{tab}cp "$f" "$subpkgdir"/home/root/.vellum/licenses/{name}/LICENSE\n'
+                + f"{tab}{tab}{tab}{tab}break\n"
+                + f"{tab}{tab}{tab}fi\n"
+                + f"{tab}{tab}done\n"
+                + f"{tab}fi\n"
+                + f'{tab}if [ ! -f "$subpkgdir"/home/root/.vellum/licenses/{name}/LICENSE ];then\n'
+                + f'{tab}{tab}echo "Unable to find LICENSE"\n'
+                + f"{tab}{tab}exit 1\n"
+                + f"{tab}fi\n"
+                + f'{tab}if [ ! -f "$subpkgdir"/home/root/.vellum/licenses/{name}/SOURCES ];then\n'
+                + f'{tab}{tab}echo "Unable to find SOURCES"\n'
+                + f"{tab}{tab}exit 1\n"
+                + f"{tab}fi\n"
             )
 
         return subpackages
@@ -686,14 +678,6 @@ class VELBUILD(APKBUILD):
     @typed_property
     def changelogurl(self, value: str | None) -> str | None:
         return value
-
-    @typed_property
-    def licenseurl(self, value: str | None) -> str | None:
-        return value
-
-    @typed_property
-    def sourceurl(self, value: str | None) -> str | None:
-        return value or self.url
 
     @typed_property
     def status(self, value: str | None) -> str | None:
