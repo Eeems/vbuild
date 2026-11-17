@@ -182,6 +182,7 @@ _assert("not velbuild.options", lambda: set(velbuild.options))
 velbuild.pkgname = "test-pkg"
 velbuild.pkgver = "1.0"
 velbuild.pkgrel = "0"
+velbuild.url = "https://example.com"
 os.environ["VBUILD_DRIVER"] = "docker"
 text = velbuild.text
 _assert("'image=' not in text", lambda: text)
@@ -196,6 +197,7 @@ velbuild = VELBUILD({}, {})
 velbuild.pkgname = "test-pkg"
 velbuild.pkgver = "1.0"
 velbuild.pkgrel = "0"
+velbuild.url = "https://example.com"
 velbuild.functions["build"] = "echo 'building...'"
 text = velbuild.text
 

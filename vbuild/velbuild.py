@@ -601,7 +601,6 @@ class VELBUILD(APKBUILD):
                 + f"{tab}fi\n"
                 + f'{tab}if [ ! -f "$subpkgdir"/home/root/.vellum/licenses/{name}/LICENSE ];then\n'
                 + f'{tab}{tab}cp "$pkgdir/home/root/.vellum/licenses/{self.pkgname}/LICENSE" "$subpkgdir/home/root/.vellum/licenses/{name}/LICENSE"\n'
-                + f"{tab}{tab}done\n"
                 + f"{tab}fi\n"
                 + f'{tab}if [ ! -f "$subpkgdir"/home/root/.vellum/licenses/{name}/LICENSE ];then\n'
                 + f'{tab}{tab}echo "Unable to find LICENSE"\n'
