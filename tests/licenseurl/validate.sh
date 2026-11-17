@@ -10,3 +10,5 @@ owner dist/noarch/test-licenseurl-0.1.0-r0.apk
 owner dist/noarch/subpackage-0.1.0-r0.apk
 exists pkg/test-licenseurl/home/root/.vellum/licenses/test-licenseurl/SOURCES
 exists pkg/subpackage/home/root/.vellum/licenses/subpackage/SOURCES
+exists pkg/test-licenseurl/home/root/.vellum/licenses/test-licenseurl/LICENSE
+exists pkg/subpackage/home/root/.vellum/licenses/subpackage/LICENSE
