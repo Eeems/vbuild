@@ -600,11 +600,7 @@ class VELBUILD(APKBUILD):
                 + f'{tab}{tab}cp "$pkgdir/home/root/.vellum/licenses/{self.pkgname}/SOURCES" "$subpkgdir/home/root/.vellum/licenses/{name}/SOURCES"\n'
                 + f"{tab}fi\n"
                 + f'{tab}if [ ! -f "$subpkgdir"/home/root/.vellum/licenses/{name}/LICENSE ];then\n'
-                + f'{tab}{tab}for f in "$startdir"/LICENSE "$srcdir"/LICENSE{{,.txt,.md,.rst}};do\n'
-                + f'{tab}{tab}{tab}if [ -f "$f" ]; then\n'
-                + f'{tab}{tab}{tab}{tab}cp "$f" "$subpkgdir"/home/root/.vellum/licenses/{name}/LICENSE\n'
-                + f"{tab}{tab}{tab}{tab}break\n"
-                + f"{tab}{tab}{tab}fi\n"
+                + f'{tab}{tab}cp "$pkgdir/home/root/.vellum/licenses/{self.pkgname}/LICENSE" "$subpkgdir/home/root/.vellum/licenses/{name}/LICENSE"\n'
                 + f"{tab}{tab}done\n"
                 + f"{tab}fi\n"
                 + f'{tab}if [ ! -f "$subpkgdir"/home/root/.vellum/licenses/{name}/LICENSE ];then\n'
