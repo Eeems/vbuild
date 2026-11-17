@@ -1,6 +1,5 @@
 import os
 import shlex
-import shutil
 from collections.abc import (
     Callable,
     Generator,
@@ -64,7 +63,7 @@ class URLValidationError(Exception):
     pass
 
 
-class DownloadError(Exception):
+class MissingURLException(Exception):
     pass
 
 
@@ -235,7 +234,7 @@ class VELBUILD(APKBUILD):
 
                 urls: list[str] = []
                 baseurl = os.environ.get("VBUILD_BASE_URL")
-                for src in self.source:
+                for src in self.source or []:
                     if "::" in src:
                         src = src.split("::", 1)[1]  # noqa: PLW2901
 
@@ -245,8 +244,11 @@ class VELBUILD(APKBUILD):
                     if "://" in src:
                         urls.append(shlex.quote(src))
 
-                if not urls:
+                if not urls and self.url:
                     urls.append(shlex.quote(self.url))
+
+                if not urls:
+                    raise MissingURLException("No urls to provide for SOURCES")
 
                 value += (  # noqa: PLW2901
                     f'{tab}mkdir -p "$pkgdir/home/root/.vellum/licenses/$pkgname"\n'
