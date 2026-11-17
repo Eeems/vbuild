@@ -21,7 +21,7 @@ foo.service
 bar.socket
 "
 package() {
-	:
+	touch "$srcdir"/LICENSE
 }
 socket() {
 	systemdunits='
