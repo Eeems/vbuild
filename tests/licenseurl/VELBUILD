@@ -15,15 +15,13 @@ source="
 a.txt
 "
 
-subpackages="
-	test-sub:test_sub
-"
+subpackages="subpackage"
 
 package() {
 	mkdir -p "$pkgdir"
 }
 
-test_sub() {
+subpackage() {
 	pkgdesc="Test subpackage"
 	package() {
 		mkdir -p "$subpkgdir"
