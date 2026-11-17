@@ -10,6 +10,8 @@ exists entware-rc.post-upgrade
 exists entware-rc.pre-deinstall
 exists dist/noarch/entware-rc-0.1-r0.apk
 owner dist/noarch/entware-rc-0.1-r0.apk
+exists pkg/entware-rc/home/root/.vellum/licenses/entware-rc/LICENSES
+exists pkg/entware-rc/home/root/.vellum/licenses/entware-rc/SOURCES
 if grep -q "builddir=" APKBUILD; then
   # shellcheck disable=SC2016
   echo '$builddir present'
