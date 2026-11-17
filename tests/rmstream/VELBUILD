@@ -33,11 +33,6 @@ package() {
 	install -d "$pkgdir"/home/root/xovi/exthome/appload
 	cp -r "$srcdir"/$folder \
 		"$pkgdir"/home/root/xovi/exthome/appload/rmstream
-
-	install -Dm644 "$srcdir"/LICENSE \
-		"$pkgdir"/home/root/.vellum/licenses/$pkgname/LICENSE
-	echo "https://github.com/asivery/appload-rmstream/archive/v$pkgver.tar.gz" > \
-		"$pkgdir"/home/root/.vellum/licenses/$pkgname/SOURCES
 }
 
 postinstall() {

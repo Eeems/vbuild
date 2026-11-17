@@ -1,4 +1,3 @@
-import os
 from argparse import (
     ArgumentParser,
     Namespace,
@@ -6,9 +5,6 @@ from argparse import (
 from typing import cast
 
 from ..abuild import abuild
-from ..velbuild import (
-    parse,
-)
 
 kwds: dict[str, str] = {
     "help": "Fetch sources to $SRCDEST",
@@ -20,6 +16,4 @@ def register(_: ArgumentParser) -> None:
 
 
 def command(args: Namespace) -> int:
-    directory = cast(str, args.C)
-    parse(os.path.join(directory, "VELBUILD")).download(directory)
-    return abuild(directory, "fetch", verbose=cast(bool, args.v))
+    return abuild(cast(str, args.C), "fetch", verbose=cast(bool, args.v))

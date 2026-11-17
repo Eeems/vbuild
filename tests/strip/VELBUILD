@@ -26,9 +26,10 @@ build() {
 }
 
 package() {
-set -e
+	set -e
 	install -Dm755 "$srcdir/hello" "$pkgdir/usr/bin/hello"
 	install -Dm644 "$srcdir/hello-copy.c" "$pkgdir/usr/share/test-strip/hello-copy.c"
+	touch "$srcdir"/LICENSE
 }
 
 subpackages="

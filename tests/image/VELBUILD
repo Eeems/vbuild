@@ -33,11 +33,6 @@ build() {
 }
 
 package() {
-	install -Dm644 "$srcdir/LICENSE" \
-		"$pkgdir/home/root/.vellum/licenses/$pkgname/LICENSE"
-	echo "https://github.com/$upstream_author/toltec/tree/stable/package/entware-rc" > \
-		"$pkgdir/home/root/.vellum/licenses/$pkgname/SOURCES"
-
 	install -D -m 666 -t "$pkgdir"/home/root/.vellum/share/$pkgname/ \
 		"$srcdir"/entware-rc@.service
 	install -D -m 755 -t "$pkgdir"/home/root/.vellum/bin/ \

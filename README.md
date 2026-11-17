@@ -90,14 +90,6 @@ Link to page that has a changelog for the package. This should link to a file th
 
 Current status of the package. Can be `maintained`, `unmaintained`, or `deprecated`. If excluded it will default to `maintained`.
 
-#### licenseurl
-
-Link to the license file for the package. This will be downloaded to `$srcdir/LICENSE` if provided. This should return the license for the specific version of the package, ideally by pointing at the tag, or commit hash, not the primary branch.
-
-#### sourceurl
-
-Link to the source repository or archive for the package. Defaults to the `url` field.
-
 ### Configuration files
 
 vbuild will generate keys in `~/.config/vbuild` that will be used to sign any packages produced. You can override these files if you wish to use your own pre-generated keys.
