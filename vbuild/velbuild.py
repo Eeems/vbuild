@@ -392,18 +392,13 @@ class VELBUILD(APKBUILD):
                 ) as f:
                     _ = f.write("#!/bin/sh\n" + cleandoc(sub_funcs["trigger"]))
 
-    def download(self) -> None:
+    def download(self, directory: str) -> None:
         if not self.licenseurl:
             return
 
         parsed = urlparse(self.licenseurl)
         if parsed.scheme not in ("http", "https"):
             raise DownloadError(f"Unsupported URL schema: {parsed.scheme}")
-
-        srcdest = os.environ.get(
-            "SRCDEST", os.path.join(os.path.expanduser("~/.cache/vbuild/distfiles"))
-        )
-        os.makedirs(srcdest, exist_ok=True)
 
         with build_opener(NonRaisingHTTPErrorProcessor).open(
             Request(  # noqa: S310
@@ -416,7 +411,7 @@ class VELBUILD(APKBUILD):
             if res.status >= 300:  # pyright: ignore[reportAny]
                 raise DownloadError(f"Unexpected response code: {res.status}")  # pyright: ignore[reportAny]
 
-            with open(os.path.join(srcdest, "LICENSE"), "wb") as f:
+            with open(os.path.join(directory, "LICENSE"), "wb") as f:
                 shutil.copyfileobj(res, f)  # pyright: ignore[reportAny]
 
     def _validate_url(self, url: str | None) -> None:

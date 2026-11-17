@@ -21,5 +21,5 @@ def register(_: ArgumentParser) -> None:
 
 def command(args: Namespace) -> int:
     directory = cast(str, args.C)
-    parse(os.path.join(directory, "VELBUILD")).download()
+    parse(os.path.join(directory, "VELBUILD")).download(directory)
     return abuild(directory, "fetch", verbose=cast(bool, args.v))

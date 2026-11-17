@@ -11,9 +11,7 @@ license="GPL-3.0"
 licenseurl="https://www.gnu.org/licenses/gpl-3.0.txt"
 sourceurl="https://github.com/asivery/appload-rmstream"
 
-source="
-a.txt
-"
+source="a.txt"
 
 subpackages="subpackage"
 
